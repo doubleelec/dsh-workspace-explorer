@@ -54,11 +54,9 @@ const DICTS: Record<string, Record<string, string>> = {
     'settings.hideNoise': '隐藏噪声目录', 'settings.hideNoise.desc': '.git · node_modules · dist 等',
     'settings.showSize': '显示文件大小',
     'settings.refStyle': '文件引用格式', 'settings.refStyle.rel': '相对路径', 'settings.refStyle.abs': '绝对路径',
-    'settings.peekLines': '预览行数',
-    'settings.width': '面板宽度', 'settings.width.narrow': '紧凑', 'settings.width.std': '标准', 'settings.width.wide': '宽松',
     'settings.restore': '恢复默认', 'settings.note': '配置在本次会话内生效,重启插件后恢复默认。',
     'settings.nav': '工作区文件',
-    'star.ask': '⭐ 顺手留颗 Star，作者能高兴一整天',
+    'star.ask': '⭐ 顺手留颗 Star，维护者能高兴一整天',
     'star.cta': '★ 给一颗 Star',
     'drawer.tip': '文件目录', 'drawer.open': '打开文件抽屉', 'drawer.label': '工作区文件',
   },
@@ -88,11 +86,9 @@ const DICTS: Record<string, Record<string, string>> = {
     'settings.hideNoise': 'Hide noise dirs', 'settings.hideNoise.desc': '.git · node_modules · dist …',
     'settings.showSize': 'Show file sizes',
     'settings.refStyle': 'File reference format', 'settings.refStyle.rel': 'Relative path', 'settings.refStyle.abs': 'Absolute path',
-    'settings.peekLines': 'Preview lines',
-    'settings.width': 'Panel width', 'settings.width.narrow': 'Narrow', 'settings.width.std': 'Standard', 'settings.width.wide': 'Wide',
     'settings.restore': 'Reset to defaults', 'settings.note': 'Settings apply for this run; they reset when the plugin restarts.',
     'settings.nav': 'Workspace Explorer',
-    'star.ask': '⭐ Drop a Star if it helped — it makes the author\'s day',
+    'star.ask': '⭐ Drop a Star if it helped — it makes the maintainer\'s day',
     'star.cta': '★ Give a Star',
     'drawer.tip': 'Files', 'drawer.open': 'Open files drawer', 'drawer.label': 'Workspace Files',
   },
@@ -160,16 +156,16 @@ interface WsCfg {
   hideNoise: boolean
   showSize: boolean
   refStyle: 'relative' | 'absolute'
-  peekLines: number
+  /** 默认宽度:仅左下角拉手双击恢复时用,平时宽度由手动拖拽记忆 */
   width: number
 }
-const CFG_DEFAULTS: WsCfg = { hideNoise: true, showSize: true, refStyle: 'relative', peekLines: 60, width: 384 }
+const CFG_DEFAULTS: WsCfg = { hideNoise: true, showSize: true, refStyle: 'relative', width: 384 }
 let cfg: WsCfg = { ...CFG_DEFAULTS }
 const cfgListeners = new Set<(c: WsCfg) => void>()
 const getCfg = (): WsCfg => cfg
 const notifyCfg = (): void => { cfgListeners.forEach((fn) => fn(cfg)) }
 const syncHostCfg = (): void => {
-  void api<ConfigResult>('config', { ignore: cfg.hideNoise ? NOISE.slice() : [], peekMaxLines: cfg.peekLines }).catch(() => {})
+  void api<ConfigResult>('config', { ignore: cfg.hideNoise ? NOISE.slice() : [] }).catch(() => {})
 }
 const setCfg = (patch: Partial<WsCfg>): void => { cfg = { ...cfg, ...patch }; notifyCfg(); syncHostCfg() }
 const resetCfg = (): void => { cfg = { ...CFG_DEFAULTS }; notifyCfg(); syncHostCfg() }
@@ -368,19 +364,9 @@ function SelectRow(props: { label: string; caption?: string; value: string; opti
 function SettingsView() {
   const [c, setC] = useState(getCfg())
   useEffect(() => subscribeCfg(setC), [])
-  const widthOpts = [
-    { value: '320', label: `${tr('settings.width.narrow')} · 320` },
-    { value: '384', label: `${tr('settings.width.std')} · 384` },
-    { value: '480', label: `${tr('settings.width.wide')} · 480` },
-  ]
   const refOpts = [
     { value: 'relative', label: tr('settings.refStyle.rel') },
     { value: 'absolute', label: tr('settings.refStyle.abs') },
-  ]
-  const lineOpts = [
-    { value: '30', label: '30' },
-    { value: '60', label: '60' },
-    { value: '120', label: '120' },
   ]
   return (
     <div className={C('dshwe-set')}>
@@ -390,7 +376,7 @@ function SettingsView() {
             <div className={C('dshwe-star-label')}>{tr('star.ask')}</div>
           </div>
           <a className={C('dshwe-star-link')}
-            href="https://github.com/Jiyr0119/dsh-workspace-explorer"
+            href="https://github.com/doubleelec/dsh-workspace-explorer"
             target="_blank" rel="noreferrer">
             {tr('star.cta')}
           </a>
@@ -400,8 +386,6 @@ function SettingsView() {
       <SwitchRow label={tr('settings.hideNoise')} caption={tr('settings.hideNoise.desc')} checked={c.hideNoise} onChange={(v) => setCfg({ hideNoise: v })} />
       <SwitchRow label={tr('settings.showSize')} checked={c.showSize} onChange={(v) => setCfg({ showSize: v })} />
       <SelectRow label={tr('settings.refStyle')} value={c.refStyle} options={refOpts} onChange={(v) => setCfg({ refStyle: v as 'relative' | 'absolute' })} />
-      <SelectRow label={tr('settings.peekLines')} value={String(c.peekLines)} options={lineOpts} onChange={(v) => setCfg({ peekLines: Number(v) })} />
-      <SelectRow label={tr('settings.width')} value={String(c.width)} options={widthOpts} onChange={(v) => setCfg({ width: Number(v) })} />
       <div className={C('dshwe-setfoot')}>
         <button type="button" className={C('dshwe-prevbtn')} onClick={resetCfg}>{tr('settings.restore')}</button>
       </div>
@@ -504,7 +488,9 @@ function Panel(props: {
     return type === 'directory' ? `@${p}/` : `@${p}`
   }
 
-  // 分页预览:按行加载第 page 页(每页 c.peekLines 行)
+  // 整文件预览:≤4MB 一次加载全文、面板内滚动查看,不再按行分页;
+  // 超大文件(>4MB)才走分页(保内存),此时保留上一页/下一页
+  const WHOLE_MAX = 4 * 1024 * 1024
   const loadPreviewPage = useCallback(async (entry: WsEntry, page: number, keepMode = false): Promise<void> => {
     setPreview((prev) => ({
       entry, loading: true, data: null, error: null, page,
@@ -514,7 +500,10 @@ function Panel(props: {
       saving: false, saveError: null,
     }))
     try {
-      const res = await api<PeekResult>('peek', { root: root ?? '', rel: entry.rel, offset: page * c.peekLines, limit: c.peekLines })
+      const tooLarge = (entry.size ?? 0) > WHOLE_MAX
+      const res = tooLarge
+        ? await api<PeekResult>('peek', { root: root ?? '', rel: entry.rel, offset: page * 200, limit: 200 })
+        : await api<PeekResult>('peek', { root: root ?? '', rel: entry.rel, whole: true })
       if (!res.ok) throw new Error(res.error ?? 'unknown')
       setPreview((prev) => ({
         entry, loading: false, data: res, error: null, page,
@@ -532,7 +521,7 @@ function Panel(props: {
         saving: false, saveError: null,
       }))
     }
-  }, [root, c.peekLines])
+  }, [root])
   const openPreview = (entry: WsEntry): void => { void loadPreviewPage(entry, 0); setTab('preview') }
   const previewPrev = (): void => { if (preview && preview.page > 0 && !preview.loading) void loadPreviewPage(preview.entry, preview.page - 1) }
   const previewNext = (): void => { if (preview && preview.data?.hasMore && !preview.loading) void loadPreviewPage(preview.entry, preview.page + 1) }
@@ -553,9 +542,9 @@ function Panel(props: {
     // 加载完整文件内容用于编辑
     const d = preview.data
     let fullContent = d.content ?? ''
-    if (d.binary || (d.size ?? 0) > 4 * 1024 * 1024) return // 超大文件不编辑
-    if (d.lineCount != null && d.lineCount > c.peekLines) {
-      // 内容不完整,加载全文
+    if (d.binary || (d.size ?? 0) > WHOLE_MAX) return // 超大文件不编辑
+    if (d.hasMore) {
+      // 超大文件分页内容不完整,加载全文
       const res = await api<PeekResult>('peek', { root, rel: preview.entry.rel, whole: true })
       if (!res.ok || res.content == null) return
       fullContent = res.content
