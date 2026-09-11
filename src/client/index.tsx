@@ -49,8 +49,7 @@ const DICTS: Record<string, Record<string, string>> = {
     'edit.preview.tip': '预览 / 编辑 (P)',
     'tab.files': '文件', 'tab.preview': '预览', 'tab.settings': '设置',
     'preview.empty': '还没有预览。点击文件行前的 👁 图标，即可在这里查看文件。',
-    'resize.tip': '拖拽调整高度，双击恢复自动',
-    'resizeW.tip': '拖拽调整宽度，双击恢复设置宽度',
+    'resize.tip': '左下角拖拽调整大小，双击恢复自动',
     'settings.title': '面板设置', 'settings.general': '通用',
     'settings.hideNoise': '隐藏噪声目录', 'settings.hideNoise.desc': '.git · node_modules · dist 等',
     'settings.showSize': '显示文件大小',
@@ -84,8 +83,7 @@ const DICTS: Record<string, Record<string, string>> = {
     'edit.preview.tip': 'Preview / Edit (P)',
     'tab.files': 'Files', 'tab.preview': 'Preview', 'tab.settings': 'Settings',
     'preview.empty': 'No preview yet. Click the 👁 icon on a file row to view it here.',
-    'resize.tip': 'Drag to resize, double-click to reset',
-    'resizeW.tip': 'Drag to resize width, double-click to reset',
+    'resize.tip': 'Drag from the corner to resize, double-click to reset',
     'settings.title': 'Panel settings', 'settings.general': 'General',
     'settings.hideNoise': 'Hide noise dirs', 'settings.hideNoise.desc': '.git · node_modules · dist …',
     'settings.showSize': 'Show file sizes',
@@ -1013,81 +1011,50 @@ function DrawerRoot(props: {
   }, [])
   // 弹窗每次打开时重测(避免沿用上一次会话/键盘状态的旧高度);关闭不重置手动高度
   useEffect(() => { if (on) setRect(measurePopup()) }, [on])
-  // 底部拖拽条:纵向拖拽改高度,松开即存 localStorage;双击清除回自动高度
-  // (鼠标 + 触屏;拖拽中用 ref 累计，避免闭包旧值导致松开存错高度)
-  const resizeRef = useRef<{ startY: number; startH: number; curH: number } | null>(null)
-  const applyResizeDelta = (clientY: number): void => {
+  // 左下角拉手:一次拖动同时改宽高(左拉变宽/右推变窄,下拉变高/上推变矮),
+  // 松开即存 localStorage;双击同时恢复自动高度 + 设置宽度(鼠标 + 触屏)
+  const resizeRef = useRef<{ startX: number; startY: number; startW: number; startH: number; curW: number; curH: number } | null>(null)
+  const applyResizeDelta = (clientX: number, clientY: number): void => {
     if (!resizeRef.current) return
     const vh = Math.min(window.innerHeight, window.visualViewport?.height ?? window.innerHeight)
+    const w = clampPopupWidth(resizeRef.current.startW - (clientX - resizeRef.current.startX), window.innerWidth)
     const h = clampPopupHeight(resizeRef.current.startH + (clientY - resizeRef.current.startY), rectRef.current.top, vh)
+    resizeRef.current.curW = w
     resizeRef.current.curH = h
+    setManualW(w)
     setManualH(h)
     setRect((r) => ({ ...r, height: h }))
   }
   const endResize = (): void => {
-    if (resizeRef.current) saveManualHeight(resizeRef.current.curH)
+    if (resizeRef.current) { saveManualWidth(resizeRef.current.curW); saveManualHeight(resizeRef.current.curH) }
     resizeRef.current = null
     document.removeEventListener('mousemove', onResizeMove)
     document.removeEventListener('mouseup', endResize)
     document.removeEventListener('touchmove', onResizeTouchMove)
     document.removeEventListener('touchend', endResize)
   }
-  const onResizeMove = (ev: MouseEvent): void => applyResizeDelta(ev.clientY)
+  const onResizeMove = (ev: MouseEvent): void => applyResizeDelta(ev.clientX, ev.clientY)
   const onResizeTouchMove = (ev: TouchEvent): void => {
-    if (ev.touches.length > 0) applyResizeDelta(ev.touches[0].clientY)
+    if (ev.touches.length > 0) applyResizeDelta(ev.touches[0].clientX, ev.touches[0].clientY)
   }
   const onResizeDown = (e: React.MouseEvent): void => {
     e.preventDefault()
+    const startW = manualW ?? c.width
     const startH = manualH ?? rectRef.current.height
-    resizeRef.current = { startY: e.clientY, startH, curH: startH }
+    resizeRef.current = { startX: e.clientX, startY: e.clientY, startW, startH, curW: startW, curH: startH }
     document.addEventListener('mousemove', onResizeMove)
     document.addEventListener('mouseup', endResize)
   }
   const onResizeTouchStart = (e: React.TouchEvent): void => {
     if (e.touches.length === 0) return
+    const startW = manualW ?? c.width
     const startH = manualH ?? rectRef.current.height
-    resizeRef.current = { startY: e.touches[0].clientY, startH, curH: startH }
+    resizeRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, startW, startH, curW: startW, curH: startH }
     document.addEventListener('touchmove', onResizeTouchMove, { passive: false })
     document.addEventListener('touchend', endResize)
   }
-  const onResizeReset = (): void => { setManualH(null); saveManualHeight(null); setRect(measurePopup()) }
+  const onResizeReset = (): void => { setManualH(null); saveManualHeight(null); setManualW(null); saveManualWidth(null); setRect(measurePopup()) }
   const popupH = manualH ?? rect.height
-  // 左侧竖拖条:横向拖拽改宽度(左拉变宽/右推变窄),松开即存 localStorage;双击清除回设置宽度
-  // (鼠标 + 触屏;与高度条同模式,用 ref 累计避免闭包旧值)
-  const resizeWRef = useRef<{ startX: number; startW: number; curW: number } | null>(null)
-  const applyResizeWDelta = (clientX: number): void => {
-    if (!resizeWRef.current) return
-    const w = clampPopupWidth(resizeWRef.current.startW - (clientX - resizeWRef.current.startX), window.innerWidth)
-    resizeWRef.current.curW = w
-    setManualW(w)
-  }
-  const endResizeW = (): void => {
-    if (resizeWRef.current) saveManualWidth(resizeWRef.current.curW)
-    resizeWRef.current = null
-    document.removeEventListener('mousemove', onResizeWMove)
-    document.removeEventListener('mouseup', endResizeW)
-    document.removeEventListener('touchmove', onResizeWTouchMove)
-    document.removeEventListener('touchend', endResizeW)
-  }
-  const onResizeWMove = (ev: MouseEvent): void => applyResizeWDelta(ev.clientX)
-  const onResizeWTouchMove = (ev: TouchEvent): void => {
-    if (ev.touches.length > 0) applyResizeWDelta(ev.touches[0].clientX)
-  }
-  const onResizeWDown = (e: React.MouseEvent): void => {
-    e.preventDefault()
-    const startW = manualW ?? c.width
-    resizeWRef.current = { startX: e.clientX, startW, curW: startW }
-    document.addEventListener('mousemove', onResizeWMove)
-    document.addEventListener('mouseup', endResizeW)
-  }
-  const onResizeWTouchStart = (e: React.TouchEvent): void => {
-    if (e.touches.length === 0) return
-    const startW = manualW ?? c.width
-    resizeWRef.current = { startX: e.touches[0].clientX, startW, curW: startW }
-    document.addEventListener('touchmove', onResizeWTouchMove, { passive: false })
-    document.addEventListener('touchend', endResizeW)
-  }
-  const onResizeWReset = (): void => { setManualW(null); saveManualWidth(null) }
   const popupW = manualW ?? c.width
   useEffect(() => {
     const hasMarker = (e: DragEvent): boolean => !!e.dataTransfer && Array.from(e.dataTransfer.types ?? []).includes(MARKER)
@@ -1145,7 +1112,7 @@ function DrawerRoot(props: {
   return (
     <div className={C('dshwe-layer')}>
       {dragKind !== null ? <div className={C('dshwe-hint')}><div className={C('dshwe-hint-chip')}><svg viewBox="0 0 16 16" width={16} height={16} aria-hidden="true"><path d="M8 3.5v6M5.7 7.2L8 9.5l2.3-2.3M3.5 12.5h9" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" /></svg>{dragKind === 'dir' ? tr('drop.hint.dir') : tr('drop.hint')}</div></div> : null}
-      {on || closing ? <div className={C('dshwe-popup') + (shown ? ` ${C('dshwe-popup-on')}` : '')} style={{ top: rect.top, height: popupH, '--dshwe-base-w': `${popupW}px` } as React.CSSProperties}><div className={C('dshwe-resize-w')} onMouseDown={onResizeWDown} onTouchStart={onResizeWTouchStart} onDoubleClick={onResizeWReset} title={tr('resizeW.tip')} role="separator" aria-orientation="vertical" aria-label={tr('resizeW.tip')}><span className={C('dshwe-resize-w-bar')} /></div><Panel {...props} onDraggingChange={setDragKind} /><div className={C('dshwe-resize')} onMouseDown={onResizeDown} onTouchStart={onResizeTouchStart} onDoubleClick={onResizeReset} title={tr('resize.tip')} role="separator" aria-orientation="horizontal" aria-label={tr('resize.tip')}><span className={C('dshwe-resize-bar')} /></div></div> : null}
+      {on || closing ? <div className={C('dshwe-popup') + (shown ? ` ${C('dshwe-popup-on')}` : '')} style={{ top: rect.top, height: popupH, width: popupW, '--dshwe-base-w': `${popupW}px` } as React.CSSProperties}><Panel {...props} onDraggingChange={setDragKind} /><div className={C('dshwe-resize-corner')} onMouseDown={onResizeDown} onTouchStart={onResizeTouchStart} onDoubleClick={onResizeReset} title={tr('resize.tip')} role="separator" aria-orientation="horizontal" aria-label={tr('resize.tip')}><span className={C('dshwe-resize-corner-bar')} /></div></div> : null}
     </div>
   )
 }
