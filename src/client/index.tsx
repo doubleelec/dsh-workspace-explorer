@@ -973,6 +973,19 @@ function DrawerRoot(props: {
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [])
+  // 点击外部自动关闭:点中面板自身 / 输入框(composer) / 头部胶囊按钮都不关,
+  // 点聊天区等其它位置才关(避免打字定位光标、拖拽插入时误关)
+  useEffect(() => {
+    if (!on) return
+    const onDown = (e: PointerEvent): void => {
+      const t = e.target instanceof HTMLElement ? e.target : null
+      if (!t) return
+      if (t.closest('[data-dshwe-popup], [data-composer-card], .dshwe-hicon')) return
+      closeDrawer()
+    }
+    document.addEventListener('pointerdown', onDown, true)
+    return () => document.removeEventListener('pointerdown', onDown, true)
+  }, [on])
   // 动态测量弹窗区域:header 底部 → composer 顶部;窗口尺寸/布局变化时实时更新
   // 加固点(针对忽高忽矮):①弹窗打开时强制重测一次;②composer 高度变化(多行输入)
   // 走同一 ResizeObserver;③会话切换导致 header/composer 替换时重新绑定节点;
@@ -1101,7 +1114,7 @@ function DrawerRoot(props: {
   return (
     <div className={C('dshwe-layer')}>
       {dragKind !== null ? <div className={C('dshwe-hint')}><div className={C('dshwe-hint-chip')}><svg viewBox="0 0 16 16" width={16} height={16} aria-hidden="true"><path d="M8 3.5v6M5.7 7.2L8 9.5l2.3-2.3M3.5 12.5h9" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" /></svg>{dragKind === 'dir' ? tr('drop.hint.dir') : tr('drop.hint')}</div></div> : null}
-      {on || closing ? <div className={C('dshwe-popup') + (shown ? ` ${C('dshwe-popup-on')}` : '')} style={{ top: rect.top, height: popupH, width: popupW, '--dshwe-base-w': `${popupW}px` } as React.CSSProperties}><Panel {...props} onDraggingChange={setDragKind} /><div className={C('dshwe-resize-corner')} onMouseDown={onResizeDown} onTouchStart={onResizeTouchStart} onDoubleClick={onResizeReset} title={tr('resize.tip')} role="separator" aria-orientation="horizontal" aria-label={tr('resize.tip')}><span className={C('dshwe-resize-corner-bar')} /></div></div> : null}
+      {on || closing ? <div data-dshwe-popup="" className={C('dshwe-popup') + (shown ? ` ${C('dshwe-popup-on')}` : '')} style={{ top: rect.top, height: popupH, width: popupW, '--dshwe-base-w': `${popupW}px` } as React.CSSProperties}><Panel {...props} onDraggingChange={setDragKind} /><div className={C('dshwe-resize-corner')} onMouseDown={onResizeDown} onTouchStart={onResizeTouchStart} onDoubleClick={onResizeReset} title={tr('resize.tip')} role="separator" aria-orientation="horizontal" aria-label={tr('resize.tip')}><span className={C('dshwe-resize-corner-bar')} /></div></div> : null}
     </div>
   )
 }
