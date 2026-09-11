@@ -1,0 +1,109 @@
+{
+  "name": "@elec/dsh-workspace-explorer",
+  "version": "0.7.1-fork.2",
+  "description": "DeepSeek Harness 工作区文件资源管理器(原生插件):右侧面板展示工作区目录树,点击/拖拽插入文件引用,含搜索/预览/国际化 | Native DSH plugin: workspace file-tree panel with click/drag references, search, preview, i18n.",
+  "license": "MIT",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/types/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/doubleelec/dsh-workspace-explorer.git"
+  },
+  "homepage": "https://github.com/doubleelec/dsh-workspace-explorer",
+  "keywords": [
+    "deepseek-harness",
+    "cordis",
+    "plugin",
+    "workspace",
+    "explorer",
+    "file-tree",
+    "ai-tools"
+  ],
+  "files": [
+    "lib",
+    "dsh.plugin.json",
+    "cordis.patch.yml",
+    "dynamic",
+    "docs",
+    "demo",
+    "assets",
+    "README.md",
+    "README.zh.md",
+    "LICENSE",
+    "manifest.json"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-input-trigger"
+      ],
+      "platform": "web"
+    },
+    "plugin": {
+      "id": "elec-workspace-explorer",
+      "kind": "dynamic-cordis-plugin",
+      "host": "dynamic/host.js",
+      "client": "dynamic/client.js",
+      "hostHandler": "ws-tree.list",
+      "clientSlots": [
+        "conversation.session.header.utilities",
+        "sidebar.footer.action",
+        "shell.overlay",
+        "conversation.input.dock",
+        "settings.section"
+      ]
+    }
+  },
+  "scripts": {
+    "build": "tsdown && tsc -p tsconfig.build.json",
+    "prepublishOnly": "npm run build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-client-locale": "^0.1.1-rc.2",
+    "@deepseek-ai/dsh-client-runtime": "^0.1.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-conversation": "^0.1.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-input-trigger": "^0.1.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-slots": "^0.1.1-rc.2",
+    "@deepseek-ai/dsh-host-webserver": "^0.1.1-rc.2",
+    "@deepseek-ai/dsh-invariants": "^0.1.1-rc.2",
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.1",
+    "cordis": "^4.0.0-rc.7",
+    "lightningcss": "^1.33.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tsdown": "^0.22.14",
+    "typescript": "^5.6.0",
+    "vitest": "^4.1.11"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "react": "^18.2.0"
+  }
+}

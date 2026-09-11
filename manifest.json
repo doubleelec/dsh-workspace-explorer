@@ -1,0 +1,36 @@
+{
+  "id": "elec-workspace-explorer",
+  "name": "工作区文件面板 (Workspace Explorer)",
+  "version": "0.7.1-fork.2",
+  "description": "右侧弹出面板展示当前工作区目录文件树,顶部 Tab 切换文件/设置,点击或拖拽文件引用到聊天输入框发送给大模型",
+  "kind": "dynamic-cordis-plugin",
+  "platforms": {
+    "host": "src/index.ts",
+    "client": "src/client/index.tsx"
+  },
+  "host": {
+    "handlers": [
+      "ws-tree.list",
+      "ws-tree.peek",
+      "ws-tree.tree"
+    ],
+    "services": [
+      "fs"
+    ]
+  },
+  "client": {
+    "slots": [
+      "conversation.session.header.utilities",
+      "sidebar.footer.action",
+      "shell.overlay",
+      "conversation.input.dock",
+      "settings.section"
+    ],
+    "services": [
+      "slots",
+      "layout",
+      "workspaces"
+    ]
+  },
+  "license": "MIT"
+}
