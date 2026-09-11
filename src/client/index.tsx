@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { InputTriggerSource } from '@deepseek-ai/dsh-client-ui-input-trigger/client'
 import styles from './panel.module.css'
 import { basename, extOf, fmtSize, formatTreeBlock } from './format'
-import { autoPopupHeight, clampPopupHeight, loadManualHeight, saveManualHeight } from './popupLayout'
+import { autoPopupHeight, clampPopupHeight, clampPopupWidth, loadManualHeight, loadManualWidth, saveManualHeight, saveManualWidth } from './popupLayout'
 
 const MARKER = 'application/x-dsh-ws-file'
 const C = (k: string): string => styles[k] ?? k
@@ -50,6 +50,7 @@ const DICTS: Record<string, Record<string, string>> = {
     'tab.files': '文件', 'tab.preview': '预览', 'tab.settings': '设置',
     'preview.empty': '还没有预览。点击文件行前的 👁 图标，即可在这里查看文件。',
     'resize.tip': '拖拽调整高度，双击恢复自动',
+    'resizeW.tip': '拖拽调整宽度，双击恢复设置宽度',
     'settings.title': '面板设置', 'settings.general': '通用',
     'settings.hideNoise': '隐藏噪声目录', 'settings.hideNoise.desc': '.git · node_modules · dist 等',
     'settings.showSize': '显示文件大小',
@@ -84,6 +85,7 @@ const DICTS: Record<string, Record<string, string>> = {
     'tab.files': 'Files', 'tab.preview': 'Preview', 'tab.settings': 'Settings',
     'preview.empty': 'No preview yet. Click the 👁 icon on a file row to view it here.',
     'resize.tip': 'Drag to resize, double-click to reset',
+    'resizeW.tip': 'Drag to resize width, double-click to reset',
     'settings.title': 'Panel settings', 'settings.general': 'General',
     'settings.hideNoise': 'Hide noise dirs', 'settings.hideNoise.desc': '.git · node_modules · dist …',
     'settings.showSize': 'Show file sizes',
@@ -959,6 +961,8 @@ function DrawerRoot(props: {
   const [rect, setRect] = useState({ top: 48, height: 480 })
   // 手动高度:localStorage 持久化,打开弹窗时恢复;双击拖拽条清除回自动
   const [manualH, setManualH] = useState<number | null>(() => loadManualHeight())
+  // 手动宽度:localStorage 持久化,优先于设置页三档;双击竖条清除回设置宽度
+  const [manualW, setManualW] = useState<number | null>(() => loadManualWidth())
   const [dragKind, setDragKind] = useState<'file' | 'dir' | null>(null)
   const [c, setC] = useState(getCfg())
   useEffect(() => subscribeOpen(setOn), [])
@@ -1048,6 +1052,43 @@ function DrawerRoot(props: {
   }
   const onResizeReset = (): void => { setManualH(null); saveManualHeight(null); setRect(measurePopup()) }
   const popupH = manualH ?? rect.height
+  // 左侧竖拖条:横向拖拽改宽度(左拉变宽/右推变窄),松开即存 localStorage;双击清除回设置宽度
+  // (鼠标 + 触屏;与高度条同模式,用 ref 累计避免闭包旧值)
+  const resizeWRef = useRef<{ startX: number; startW: number; curW: number } | null>(null)
+  const applyResizeWDelta = (clientX: number): void => {
+    if (!resizeWRef.current) return
+    const w = clampPopupWidth(resizeWRef.current.startW - (clientX - resizeWRef.current.startX), window.innerWidth)
+    resizeWRef.current.curW = w
+    setManualW(w)
+  }
+  const endResizeW = (): void => {
+    if (resizeWRef.current) saveManualWidth(resizeWRef.current.curW)
+    resizeWRef.current = null
+    document.removeEventListener('mousemove', onResizeWMove)
+    document.removeEventListener('mouseup', endResizeW)
+    document.removeEventListener('touchmove', onResizeWTouchMove)
+    document.removeEventListener('touchend', endResizeW)
+  }
+  const onResizeWMove = (ev: MouseEvent): void => applyResizeWDelta(ev.clientX)
+  const onResizeWTouchMove = (ev: TouchEvent): void => {
+    if (ev.touches.length > 0) applyResizeWDelta(ev.touches[0].clientX)
+  }
+  const onResizeWDown = (e: React.MouseEvent): void => {
+    e.preventDefault()
+    const startW = manualW ?? c.width
+    resizeWRef.current = { startX: e.clientX, startW, curW: startW }
+    document.addEventListener('mousemove', onResizeWMove)
+    document.addEventListener('mouseup', endResizeW)
+  }
+  const onResizeWTouchStart = (e: React.TouchEvent): void => {
+    if (e.touches.length === 0) return
+    const startW = manualW ?? c.width
+    resizeWRef.current = { startX: e.touches[0].clientX, startW, curW: startW }
+    document.addEventListener('touchmove', onResizeWTouchMove, { passive: false })
+    document.addEventListener('touchend', endResizeW)
+  }
+  const onResizeWReset = (): void => { setManualW(null); saveManualWidth(null) }
+  const popupW = manualW ?? c.width
   useEffect(() => {
     const hasMarker = (e: DragEvent): boolean => !!e.dataTransfer && Array.from(e.dataTransfer.types ?? []).includes(MARKER)
     const readPayload = (e: DragEvent): { root?: string; rel?: string; name?: string; type?: string } | null => {
@@ -1104,7 +1145,7 @@ function DrawerRoot(props: {
   return (
     <div className={C('dshwe-layer')}>
       {dragKind !== null ? <div className={C('dshwe-hint')}><div className={C('dshwe-hint-chip')}><svg viewBox="0 0 16 16" width={16} height={16} aria-hidden="true"><path d="M8 3.5v6M5.7 7.2L8 9.5l2.3-2.3M3.5 12.5h9" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" /></svg>{dragKind === 'dir' ? tr('drop.hint.dir') : tr('drop.hint')}</div></div> : null}
-      {on || closing ? <div className={C('dshwe-popup') + (shown ? ` ${C('dshwe-popup-on')}` : '')} style={{ top: rect.top, height: popupH, '--dshwe-base-w': `${c.width}px` } as React.CSSProperties}><Panel {...props} onDraggingChange={setDragKind} /><div className={C('dshwe-resize')} onMouseDown={onResizeDown} onTouchStart={onResizeTouchStart} onDoubleClick={onResizeReset} title={tr('resize.tip')} role="separator" aria-orientation="horizontal" aria-label={tr('resize.tip')}><span className={C('dshwe-resize-bar')} /></div></div> : null}
+      {on || closing ? <div className={C('dshwe-popup') + (shown ? ` ${C('dshwe-popup-on')}` : '')} style={{ top: rect.top, height: popupH, '--dshwe-base-w': `${popupW}px` } as React.CSSProperties}><div className={C('dshwe-resize-w')} onMouseDown={onResizeWDown} onTouchStart={onResizeWTouchStart} onDoubleClick={onResizeWReset} title={tr('resizeW.tip')} role="separator" aria-orientation="vertical" aria-label={tr('resizeW.tip')}><span className={C('dshwe-resize-w-bar')} /></div><Panel {...props} onDraggingChange={setDragKind} /><div className={C('dshwe-resize')} onMouseDown={onResizeDown} onTouchStart={onResizeTouchStart} onDoubleClick={onResizeReset} title={tr('resize.tip')} role="separator" aria-orientation="horizontal" aria-label={tr('resize.tip')}><span className={C('dshwe-resize-bar')} /></div></div> : null}
     </div>
   )
 }

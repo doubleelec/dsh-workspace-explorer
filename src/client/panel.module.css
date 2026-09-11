@@ -142,6 +142,11 @@
 .dshwe-resize { flex: none; height: 14px; cursor: ns-resize; display: flex; align-items: center; justify-content: center; touch-action: none; }
 .dshwe-resize-bar { width: 48px; height: 4px; border-radius: 999px; background: var(--dsw-alias-border-l2, rgba(128,128,128,.4)); }
 .dshwe-resize:hover .dshwe-resize-bar { background: var(--dsw-alias-state-business-primary, #4176e6); }
+/* ---- 左侧竖拖拽条:手动调宽度(左拉变宽/右推变窄,双击恢复设置宽度) ---- */
+.dshwe-popup { position: fixed; }
+.dshwe-resize-w { position: absolute; left: 0; top: 0; bottom: 0; width: 12px; cursor: ew-resize; display: flex; align-items: center; justify-content: center; touch-action: none; z-index: 1; }
+.dshwe-resize-w-bar { width: 4px; height: 48px; border-radius: 999px; background: var(--dsw-alias-border-l2, rgba(128,128,128,.4)); }
+.dshwe-resize-w:hover .dshwe-resize-w-bar { background: var(--dsw-alias-state-business-primary, #4176e6); }
 /* ---- 预览/编辑面板 ---- */
 .dshwe-preview-panel { display: flex; flex-direction: column; flex: 1; min-width: 0; overflow: hidden; }
 .dshwe-preview-head { display: flex; align-items: center; gap: 6px; padding: 10px 12px 6px; flex: none; flex-wrap: wrap; }

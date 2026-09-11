@@ -10,6 +10,10 @@
 export const POPUP_MIN_H = 320
 /** 手动高度 localStorage key。 */
 export const POPUP_MANUAL_KEY = 'dshwe.popupH.v1'
+/** 手动宽度下限:再窄目录树没法看。 */
+export const POPUP_MIN_W = 280
+/** 手动宽度 localStorage key。 */
+export const POPUP_MANUAL_W_KEY = 'dshwe.popupW.v1'
 
 /**
  * 自动高度数学(measurePopup 的 DOM-free 部分)。
@@ -56,5 +60,43 @@ export function saveManualHeight(h: number | null, key = POPUP_MANUAL_KEY): void
     else window.localStorage.setItem(key, String(Math.round(h)))
   } catch {
     /* 存储不可用时忽略,自动高度兜底 */
+  }
+}
+
+/**
+ * 手动宽度钳制(拖拽中 / 渲染时用,顺手取整)。
+ * @param w - 拖拽目标宽度;左边缘左拉变宽(增量为负),右推变窄。
+ * @param vw - 视口宽度;最大留 16px 边距,手机上自动收窄不挤出屏幕。
+ */
+export function clampPopupWidth(w: number, vw: number, minW = POPUP_MIN_W): number {
+  const maxW = Math.max(minW, vw - 32)
+  return Math.min(Math.max(minW, Math.round(w)), maxW)
+}
+
+/**
+ * 读手动宽度:无存储 / 非法值 / 无 window(node 单测)一律返回 null(回落设置页宽度)。
+ */
+export function loadManualWidth(key = POPUP_MANUAL_W_KEY): number | null {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return null
+    const raw = window.localStorage.getItem(key)
+    if (raw == null || raw === '') return null
+    const n = Number(raw)
+    return Number.isFinite(n) && n > 0 ? n : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 写手动宽度:null 清除(恢复设置页宽度);存储不可用时静默忽略。
+ */
+export function saveManualWidth(w: number | null, key = POPUP_MANUAL_W_KEY): void {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return
+    if (w == null) window.localStorage.removeItem(key)
+    else window.localStorage.setItem(key, String(Math.round(w)))
+  } catch {
+    /* 存储不可用时忽略,设置页宽度兜底 */
   }
 }
