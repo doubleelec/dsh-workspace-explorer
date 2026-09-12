@@ -1,6 +1,6 @@
 {
   "name": "@elec/dsh-workspace-explorer",
-  "version": "0.7.1-fork.2",
+  "version": "0.7.1-fork.3",
   "description": "DeepSeek Harness 工作区文件资源管理器(原生插件):右侧面板展示工作区目录树,点击/拖拽插入文件引用,含搜索/预览/国际化 | Native DSH plugin: workspace file-tree panel with click/drag references, search, preview, i18n.",
   "license": "MIT",
   "type": "module",
@@ -38,7 +38,6 @@
     "lib",
     "dsh.plugin.json",
     "cordis.patch.yml",
-    "dynamic",
     "docs",
     "demo",
     "assets",
@@ -63,9 +62,9 @@
     },
     "plugin": {
       "id": "elec-workspace-explorer",
-      "kind": "dynamic-cordis-plugin",
-      "host": "dynamic/host.js",
-      "client": "dynamic/client.js",
+      "kind": "native",
+      "host": "lib/index.js",
+      "client": "lib/client.js",
       "hostHandler": "ws-tree.list",
       "clientSlots": [
         "conversation.session.header.utilities",

@@ -5,15 +5,9 @@
 
 ---
 
-## 一、DSH 插件的两种形态 / Two plugin shapes
+## 一、DSH 插件形态:原生 npm 包 / Plugin shape
 
-| 形态 | 安装方式 | 生命周期 | 适用场景 |
-|---|---|---|---|
-| **动态 Cordis 插件** | 粘贴 `dynamic/host.js` + `dynamic/client.js` 到会话 | 进程级,DSH 重启即丢失 | 快速原型、临时工具 |
-| **原生 npm 包** | `dsh plugin --profile web add @jiyr0119/dsh-workspace-explorer@latest` | 持久,重启保留 | 正式发布、dsh-market 一键安装 |
-
-动态插件桥:`harness.handle(name, fn)`(host 端注册)+ `host.call(name, args)`(client 端调用)。
-注意 `harness` 是 `node:vm` 沙箱全局,**仅动态包可用**,原生包没有它。
+本插件为原生单包:`dsh plugin --profile web add @elec/dsh-workspace-explorer@latest`,持久安装,重启保留,支持 dsh-market 一键安装。(历史上的动态粘贴版已在 v0.7.2 移除,不再维护。)
 
 ## 二、原生包架构(三件套)/ Native package architecture
 
@@ -248,7 +242,7 @@ const { t } = useLocale('dsh-workspace-explorer')   // 命名空间唯一,避免
 
 ## 九、版本演进时间线(v0.2.0 → v0.4.0)/ Release timeline
 
-- **v0.2.0** — 原生单包重构:Host `src/index.ts`(webServer `/dsh-we/api/list` + `/peek`)+ 浏览器 `src/client/index.tsx`(dsh.plugin.json client.main + `__ModuleLoader__`);动态版保留 `dynamic/`。
+- **v0.2.0** — 原生单包重构:Host `src/index.ts`(webServer `/dsh-we/api/list` + `/peek`)+ 浏览器 `src/client/index.tsx`(dsh.plugin.json client.main + `__ModuleLoader__`)。
 - **v0.3.0** — 顶部 Tab(文件/设置)+ 设置页(隐藏噪声目录/显示大小/引用格式/预览行数/面板宽度),设置镜像进 DSH 设置壳;Host 加 `/dsh-we/api/config`。
 - **v0.3.1** — 修复 `cordis.patch.yml` 作用域包名未加引号导致的 `dsh web` 启动崩溃。
 - **v0.3.2** — 修复 `webServer.register` 传数组导致路由静默失效;面板改为右上角 dock 式(可拖宽 280–640px)。

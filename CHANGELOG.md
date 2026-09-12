@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.7.1-fork.3] - 2026-09-12
+
+### 移除 Removal
+
+- **删除动态粘贴版** — 移除 `dynamic/`(host.js + client.js)与 `docs/native-package.md` 过时路线文档;只保留原生单包(`src/` → `lib/`),文档仅保留 `dsh plugin add` 安装方式 / **Drop the dynamic paste variant** — removed `dynamic/` and the obsolete `docs/native-package.md`; native single-package only from now on.
+
+### 交互 Interaction
+
+- **行点击改为预览** — 点击文件行直接在「预览」Tab 打开文件,不再误触插入引用;插入收敛到行首 **⏎ 按钮**(点击插入 `@路径` 引用),拐弯箭头表动作更直观 / **Row click now previews** — clicking a file row opens it in the Preview tab instead of inserting a reference; inserting moves to the leading **⏎ button** (inserts an `@path` reference).
+- **分享图标换拐弯箭头** — 行首 @ 先换 ⏎ 形手绘 SVG(走形),改用 Lucide 现成 `corner-down-left`,最终定为左下箭头 `arrow-down-left`(指向左下输入框,方向即表意),tooltip 为"插入到对话" / **Share icon → arrow-down-left** — Lucide off-the-shelf icon pointing at the composer.
+- **键盘**:文件行 `Enter` / `空格` 打开预览,`@` / `i` 插入引用 / **Keyboard**: `Enter` / `Space` previews, `@` / `i` inserts a reference on file rows.
+- **Markdown 渲染预览** — `.md` / `.mdx` 预览默认渲染视图(标题/列表/代码块/引用/表格/任务列表),头部可一键切回源码;零依赖手写渲染器,React 元素构建无 XSS 风险 / **Markdown rendering** — `.md` / `.mdx` files preview rendered by default with a source toggle; zero-dependency renderer built on React elements, XSS-safe by construction.
+
 ## [v0.6.3] - 2026-08-25
 
 ### 改进 Improvement

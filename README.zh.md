@@ -45,13 +45,12 @@
 - 🗂 **顶部 Tab 栏** — 弹窗顶部点击「文件 / 设置」切换页面;设置页实时调节行为(隐藏噪声目录、显示大小、引用格式、预览行数、面板宽度),并同步进 DSH 设置 → 工作区文件
 - 🗂 **懒加载展开** — 目录按需加载,自动隐藏 `node_modules` / `.git` / `dist` / `__pycache__` 等噪声目录
 - 🎨 **文件类型图标** — 按扩展名着色的实心文档徽标(TS / JS / Python / JSON / Markdown / 图片 / 配置 / 脚本等),目录为琥珀色文件夹、展开态高亮
-- 🖱 **点击插入** — 点击文件行,在输入框末尾追加 `[file: 相对路径]` 引用,发送后模型会用 `read` 读取真实内容
+- 🖱 **点击预览** — 点击文件行在「预览」Tab 打开;行首 **@ 按钮**把 `@路径` 引用插入输入框发给模型
 - 🖱 **拖拽插入** — 文件拖到输入框内任意位置在光标处插入(带全屏虚线提示),拖到其他位置则追加到末尾;**目录也可拖拽**,松开即插入限层数的紧凑目录树文本
 - 🖱 **多选批量插入** — Shift / ⌘ 点击多选,一键批量插入(文件 → 引用,目录 → 目录树)
 - 🌓 **跟随主题** — 全部使用 DSH 的 `--dsw-alias-*` 设计 token,浅色/深色自动适配;原生弹窗外观(16px 圆角、lv3 阴影)
 - 🔍 **搜索过滤** — 按文件名过滤已加载目录,平铺展示结果并显示匹配数
-- 👁 **分页预览** — 任意文本文件按行翻页预览(上一页 / 下一页),显示总行数与当前页;可插入引用,小文件(≤32KB)可直接插入完整内容
-- ✏️ **Split view 预览** — 点击文件名前的 👁 图标,左侧滑出 340px 预览面板,文件树在右侧保持可见
+- ✏️ **预览 Tab** — 点击任意文件行在独立 Tab 预览;`.md` / `.mdx` 默认渲染排版(可切回源码);可插入引用,小文件(≤32KB)可直接插入完整内容
 - 📝 **文件编辑** — 预览面板点击「编辑」进入 textarea 编辑态,支持保存/放弃/取消;保存时检测文件外部修改
 - 🌐 **国际化** — 通过 DSH locale 服务注册中/英词典,面板跟随 DSH 界面语言切换
 
@@ -59,7 +58,6 @@
 
 ### 安装与使用
 
-**方式一 · 原生安装(`dsh plugin add` / 商店)— 推荐**
 一条命令装好完整插件,无需构建、无需改任何配置。npm 包同时提供原生 Host 半区(`lib/index.js`,webServer JSON 路由,含 `/dsh-we/api/config`)和浏览器 bundle(`lib/client.js` 经 `dsh.plugin.json`)。
 
 ```bash
@@ -68,21 +66,9 @@ dsh plugin --profile web add -w @jiyr0119/dsh-workspace-explorer@latest
 
 (或在 DSH 市场点击安装按钮)。安装后会话头部即出现**「工作区文件」胶囊(名称 + 图标)**;必要时重启或硬刷新 Web UI。这是零配置、免构建的路径。
 
-**方式二 · npm 源码包(手动粘贴)**
-`npm install @jiyr0119/dsh-workspace-explorer` — 内含 `dynamic/host.js` / `dynamic/client.js`,按方式三粘贴即可,版本随 semver 发布。
-
-**方式三 · 动态插件粘贴(零构建备用)**
-*动态 Cordis 插件*:无需构建、无需改任何配置,适合快速尝试或没有商店的环境。
-
-1. 在 DSH Web UI 中让 Agent 执行 `cordis_define`(或使用动态插件面板),`idPrefix` 填 `wsex`
-2. 将 [`dynamic/host.js`](./dynamic/host.js) 全文粘贴到 **Host 代码**
-3. 将 [`dynamic/client.js`](./dynamic/client.js) 全文粘贴到 **Client 代码**
-4. `cordis_run` 激活,首次出现 Run 卡时点击授权
-5. 点击会话头部**「工作区文件」胶囊**(名称 + 文件夹图标)→ 展开目录 → 点击文件,或拖进输入框,然后发送
-
 > ℹ️ **pnpm 提示**:现代 pnpm(9/10)会拒绝在 workspace root 直接 add(`ERR_PNPM_ADDING_TO_ROOT`),故命令带 `-w`。另一种做法:在 `~/.dsh/profiles/web/.npmrc` 写入 `ignore-workspace-root-check=true`。
 
-> ⚠️ **常见误解**:收录本身不会自动安装任何东西 —— 用户仍需点安装。方式一安装后即出现完整 UI(原生 bundle,v0.4.0+ 已验证 `dsh plugin add` 干净安装、无启动报错)。
+> ⚠️ **常见误解**:收录本身不会自动安装任何东西 —— 用户仍需点安装。安装后即出现完整 UI(原生 bundle,v0.4.0+ 已验证 `dsh plugin add` 干净安装、无启动报错)。
 
 详细步骤见 [`docs/install.md`](./docs/install.md)。
 
@@ -111,19 +97,19 @@ dsh-workspace-explorer/
 │       └── pages.yml     # 部署 demo/ 到 GitHub Pages(手动;预览已隐藏)
 ├── docs/
 │   ├── install.md        # 安装指南
-│   ├── native-package.md # 原生 DSH 包路线(上游 PR 草图)
 │   └── publish.md        # 发布流程(GitHub + npm)
 └── src/
-    ├── host.js           # Host 半区:fs 列目录 + ws-tree.list RPC
-    └── client.js         # Client 半区:面板 + 图标 + 拖拽
+    ├── index.ts          # 原生 Host 半区:webServer JSON 路由(/dsh-we/api/*)
+    └── client/
+        └── index.tsx     # 原生 Client 半区:弹窗 + 文件树 + 图标 + 拖拽
 ```
 
 ## 实现要点
 
 | 能力 | 机制 |
 |---|---|
-| 目录读取 | Host `fs.resolve` / `fs.listDir` |
-| Host→Client 通信 | `harness.handle('ws-tree.list' / 'ws-tree.peek')` ↔ `host.call(...)` |
+| 目录读取 | Host `fs.resolve` / `fs.listDir`(经 `/dsh-we/api/*` JSON 路由) |
+| Host→Client 通信 | 同源 `fetch POST /dsh-we/api/list|peek|tree|config|write` |
 | 弹窗 | `shell.overlay` 槽位(`useWorkspaces` / `useSessions`),位置在会话头部与输入框之间实时测量 |
 | 开关按钮 | `conversation.session.header.utilities` 槽位(「工作区文件」胶囊:名称 + 图标) |
 | 写入输入框 | `conversation.input.dock` → `inputActions.setDraft` |
@@ -132,7 +118,7 @@ dsh-workspace-explorer/
 
 ## 版本
 
-当前版本 **v0.6.0** — **M2 写路径**:点击文件名前的 👁 打开 **340px 分屏预览面板**(文件树在右侧保持可见),预览面板内可直接**编辑文件**(textarea 编辑态 + 保存/放弃/取消、「已修改」脏标记,保存时检测文件外部修改)。
+当前版本 **v0.6.0** — **M2 写路径**:点击任意文件名打开独立**预览 Tab**,预览面板内可直接**编辑文件**(textarea 编辑态 + 保存/放弃/取消、「已修改」脏标记,保存时检测文件外部修改)。
 变更记录见 [CHANGELOG.md](./CHANGELOG.md)。
 
 ## Roadmap
@@ -161,11 +147,7 @@ dsh-workspace-explorer/
 - 跨已加载目录的内容搜索(host 侧 grep);最近文件 / 收藏夹
 - 面板可拖动/可调宽并记住位置;完整键盘导航;复制路径 / 在系统文件管理器中显示
 - 虚拟滚动(超大目录);浅/深色主题回归检查;Playwright e2e
-
-**依赖上游的杂务**
-
-- 原生 DSH 包(`@Remote` 命名空间,需上游支持)— 见 [`docs/native-package.md`](./docs/native-package.md)
-- 接入 dsh-genie 固化安装;CI(lint + e2e + 自动发布)
+- CI(lint + e2e + 自动发布)
 
 ## License
 

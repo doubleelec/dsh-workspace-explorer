@@ -105,7 +105,17 @@
 }
 .dshwe-file-ico-btn:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.12)); }
 .dshwe-file-ico-btn:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #4176e6); outline-offset: -2px; }
-/* ---- 预览按钮(文件行,默认可见) ---- */
+/* ---- 分享按钮(文件行左侧 @,点击插入 @引用到对话) ---- */
+.dshwe-share-btn {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border: 0; border-radius: 6px; cursor: pointer;
+  background: transparent; color: var(--dsw-alias-label-secondary, #9a9a9a);
+  transition: background .12s ease, color .12s ease;
+}
+.dshwe-share-btn:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.12)); color: var(--dsw-alias-state-business-primary, #4176e6); }
+.dshwe-share-btn-on { color: var(--dsw-alias-state-business-primary, #4176e6); }
+.dshwe-share-btn:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #4176e6); outline-offset: -2px; }
+/* ---- 预览按钮(旧类名保留兼容) ---- */
 .dshwe-preview-btn {
   flex: none; display: inline-flex; align-items: center; justify-content: center;
   width: 26px; height: 26px; border: 0; border-radius: 6px; cursor: pointer;
@@ -149,6 +159,36 @@
 .dshwe-preview-name { font-size: 12.5px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dshwe-preview-meta { font-size: 11px; color: var(--dsw-alias-label-caption, #8a8a8a); flex: none; }
 .dshwe-preview-pre { flex: 1; overflow: auto; margin: 0; padding: 4px 12px 10px; font: 11.5px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--dsw-alias-label-primary, #e8e8e8); white-space: pre; }
+/* ---- Markdown 渲染视图 ---- */
+.dshwe-md { flex: 1; overflow: auto; margin: 0; padding: 6px 14px 12px; font-size: 12.5px; line-height: 1.65; color: var(--dsw-alias-label-primary, #e8e8e8); overflow-wrap: anywhere; }
+.dshwe-md > :first-child { margin-top: 2px; }
+.dshwe-md-h { font-weight: 700; line-height: 1.4; margin: 12px 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--dsw-alias-border-l3, rgba(128,128,128,.2)); }
+.dshwe-md-h1 { font-size: 17px; }
+.dshwe-md-h2 { font-size: 15px; }
+.dshwe-md-h3 { font-size: 13.5px; border-bottom: 0; padding-bottom: 0; }
+.dshwe-md-h4, .dshwe-md-h5, .dshwe-md-h6 { font-size: 12.5px; border-bottom: 0; padding-bottom: 0; color: var(--dsw-alias-label-secondary, #9a9a9a); }
+.dshwe-md-p { margin: 6px 0; }
+.dshwe-md-code { font: 11.5px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.14)); border-radius: 5px; padding: 1px 5px; }
+.dshwe-md-pre { position: relative; margin: 8px 0; padding: 10px 12px; background: var(--dsw-alias-bg-layer-1, #222); border: 1px solid var(--dsw-alias-border-l3, rgba(128,128,128,.2)); border-radius: 10px; overflow: auto; font: 11.5px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre; }
+.dshwe-md-pre code { background: transparent; padding: 0; }
+.dshwe-md-lang { position: absolute; top: 6px; right: 10px; font: 10px/1.4 -apple-system, 'Segoe UI', sans-serif; color: var(--dsw-alias-label-caption, #8a8a8a); }
+.dshwe-md-quote { margin: 8px 0; padding: 2px 0 2px 12px; border-left: 3px solid var(--dsw-alias-state-business-primary, #4176e6); color: var(--dsw-alias-label-secondary, #9a9a9a); }
+.dshwe-md-quote > :first-child { margin-top: 0; }
+.dshwe-md-quote > :last-child { margin-bottom: 0; }
+.dshwe-md-ul, .dshwe-md-ol, .dshwe-md-task { margin: 6px 0; padding-left: 22px; }
+.dshwe-md-ul li, .dshwe-md-ol li, .dshwe-md-task li { margin: 3px 0; }
+.dshwe-md-ul li::marker, .dshwe-md-ol li::marker { color: var(--dsw-alias-label-caption, #8a8a8a); }
+.dshwe-md-task { list-style: none; padding-left: 4px; }
+.dshwe-md-check { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; margin-right: 7px; border: 1px solid var(--dsw-alias-border-l2, rgba(128,128,128,.4)); border-radius: 4px; font-size: 10px; line-height: 1; color: #fff; vertical-align: -1px; }
+.dshwe-md-check-on { background: var(--dsw-alias-state-business-primary, #4176e6); border-color: transparent; }
+.dshwe-md-hr { margin: 12px 0; border: 0; border-top: 1px solid var(--dsw-alias-border-l3, rgba(128,128,128,.2)); }
+.dshwe-md-link { color: var(--dsw-alias-state-business-primary, #4176e6); }
+.dshwe-md-tablewrap { margin: 8px 0; overflow: auto; border: 1px solid var(--dsw-alias-border-l3, rgba(128,128,128,.2)); border-radius: 10px; }
+.dshwe-md-table { border-collapse: collapse; width: 100%; font-size: 12px; }
+.dshwe-md-table th, .dshwe-md-table td { padding: 6px 10px; border-bottom: 1px solid var(--dsw-alias-border-l3, rgba(128,128,128,.2)); text-align: left; vertical-align: top; }
+.dshwe-md-table thead th { background: var(--dsw-alias-bg-layer-1, #222); font-weight: 600; }
+.dshwe-md-table tbody tr:last-child td { border-bottom: 0; }
+.dshwe-prevbtn-on { color: var(--dsw-alias-state-business-primary, #4176e6); border-color: rgba(65,118,230,.5); }
 .dshwe-preview-actions { display: flex; align-items: center; gap: 8px; padding: 0 12px 10px; flex: none; }
 /* ---- 编辑器 textarea ---- */
 .dshwe-editor {
@@ -169,7 +209,7 @@
 .dshwe-act { display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; color: var(--dsw-alias-label-secondary, #9a9a9a); padding: 5px 8px; border-radius: 8px; cursor: pointer; font: inherit; }
 .dshwe-act:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.12)); color: var(--dsw-alias-label-primary, #e8e8e8); }
 .dshwe-act-on { color: var(--dsw-alias-state-business-primary, #4176e6); }
-.dshwe-row:focus-visible, .dshwe-hicon:focus-visible, .dshwe-icobtn:focus-visible, .dshwe-act:focus-visible, .dshwe-addbtn:focus-visible, .dshwe-prevbtn:focus-visible, .dshwe-file-ico-btn:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #4176e6); outline-offset: -2px; }
+.dshwe-row:focus-visible, .dshwe-hicon:focus-visible, .dshwe-icobtn:focus-visible, .dshwe-act:focus-visible, .dshwe-addbtn:focus-visible, .dshwe-prevbtn:focus-visible, .dshwe-file-ico-btn:focus-visible, .dshwe-share-btn:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #4176e6); outline-offset: -2px; }
 
 /* ---- 顶部 Tab 栏(对标 dsh-better-sidebar) ---- */
 .dshwe-tabs { display: flex; gap: 2px; padding: 0 14px; flex: none; border-bottom: 1px solid var(--dsw-alias-border-l3, rgba(128,128,128,.2)); }

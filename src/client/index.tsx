@@ -6,10 +6,12 @@
  * 通过 /dsh-we/api/* JSON 路由调用 Host(list / peek / config)。
  * 浏览器 bundle(src/client/index.tsx → lib/client.js,__ModuleLoader__ 格式)。
  */
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import type { InputTriggerSource } from '@deepseek-ai/dsh-client-ui-input-trigger/client'
 import styles from './panel.module.css'
 import { basename, extOf, fmtSize, formatTreeBlock } from './format'
+import { isMarkdownFile, parseMarkdown } from './markdown'
+import type { MdInline, MdNode } from './markdown'
 import { autoPopupHeight, clampPopupHeight, clampPopupWidth, loadManualHeight, loadManualWidth, saveManualHeight, saveManualWidth } from './popupLayout'
 
 const MARKER = 'application/x-dsh-ws-file'
@@ -30,7 +32,7 @@ const NS = 'dsh-workspace-explorer'
 const DICTS: Record<string, Record<string, string>> = {
   zh: {
     'panel.title': '工作区文件', 'ws.current': '当前目录', 'search.ph': '搜索文件(仅已加载目录)…',
-    hint: '点击/拖拽插入;Shift 或 ⌘ 点击可多选批量插入', 'empty.title': '还没有可浏览的工作区。选择一个项目文件夹,即可在这里查看目录文件。',
+    hint: '点击预览 / ⏎ 插入到对话;拖拽也可插入;Shift 或 ⌘ 点击多选批量插入', 'empty.title': '还没有可浏览的工作区。选择一个项目文件夹,即可在这里查看目录文件。',
     'empty.add': '+ 选择文件夹作为工作区', 'loading.ws': '正在加载工作区…', hit: '匹配 {n} 项',
     'hit.none': '没有匹配「{q}」的文件(搜索范围:已加载目录)', truncated: '已截断,仅显示前 {n} 项',
     loading: '加载中…', 'load.fail': '加载失败: ', read: '读取中…', 'read.fail': '读取失败: ',
@@ -38,7 +40,7 @@ const DICTS: Record<string, Record<string, string>> = {
     'btn.ref': '插入引用', 'btn.content': '插入内容',
     'btn.content.tip': '把文件内容插入输入框', 'btn.content.no': '文件过大或二进制,无法内联',
     'sidebar.tooltip': '工作区文件', 'sidebar.label': '文件', refresh: '刷新', close: '关闭',
-    'close.preview': '关闭预览', 'row.tip': '点击或拖拽到输入框', 'preview.tip': '预览 (P)',
+    'close.preview': '关闭预览', 'row.tip': '点击预览,拖拽到输入框插入',
     'insert.tip': '插入引用', 'drop.hint': '松开以插入文件引用到输入框', 'drop.hint.dir': '松开以插入目录树',
     'add.ws': '添加工作区', 'dir.tree.fail': '目录树生成失败: ',
     'sel.count': '已选 {n} 项', 'sel.insert': '插入所选', 'sel.clear': '清除',
@@ -46,9 +48,11 @@ const DICTS: Record<string, Record<string, string>> = {
     'edit': '编辑', 'edit.save': '保存', 'edit.discard': '放弃', 'edit.cancel': '取消',
     'edit.dirty': '已修改', 'edit.saving': '保存中…', 'edit.save.fail': '保存失败: ',
     'edit.save.ok': '已保存', 'edit.confirm.discard': '放弃修改？', 'edit.readonly': '只读文件',
-    'edit.preview.tip': '预览 / 编辑 (P)',
+    'share.tip': '插入到对话 (@引用)',
     'tab.files': '文件', 'tab.preview': '预览', 'tab.settings': '设置',
-    'preview.empty': '还没有预览。点击文件行前的 👁 图标，即可在这里查看文件。',
+    'md.source': '源码', 'md.rendered': '渲染',
+    'md.source.tip': '查看 Markdown 源码', 'md.rendered.tip': '查看渲染效果',
+    'preview.empty': '还没有预览。点击任意文件行，即可在这里查看。',
     'resize.tip': '左下角拖拽调整大小，双击恢复自动',
     'settings.title': '面板设置', 'settings.general': '通用',
     'settings.hideNoise': '隐藏噪声目录', 'settings.hideNoise.desc': '.git · node_modules · dist 等',
@@ -62,7 +66,7 @@ const DICTS: Record<string, Record<string, string>> = {
   },
   en: {
     'panel.title': 'Workspace Files', 'ws.current': 'Current dir', 'search.ph': 'Search files (loaded dirs only)…',
-    hint: 'Click / drag to insert; Shift or ⌘ click to select multiple', 'empty.title': 'No browsable workspace yet. Pick a project folder to view its files.',
+    hint: 'Click to preview / ⏎ to insert; drag also inserts; Shift or ⌘ click to select multiple', 'empty.title': 'No browsable workspace yet. Pick a project folder to view its files.',
     'empty.add': '+ Choose a folder as workspace', 'loading.ws': 'Loading workspaces…', hit: '{n} match(es)',
     'hit.none': 'No files match "{q}" (search covers loaded dirs)', truncated: 'Truncated: showing the first {n}',
     loading: 'Loading…', 'load.fail': 'Load failed: ', read: 'Reading…', 'read.fail': 'Read failed: ',
@@ -70,7 +74,7 @@ const DICTS: Record<string, Record<string, string>> = {
     'btn.ref': 'Insert reference', 'btn.content': 'Insert content',
     'btn.content.tip': 'Insert the file content into the composer', 'btn.content.no': 'Too large or binary — cannot inline',
     'sidebar.tooltip': 'Workspace Files', 'sidebar.label': 'Files', refresh: 'Refresh', close: 'Close',
-    'close.preview': 'Close preview', 'row.tip': 'click or drag to the composer', 'preview.tip': 'Preview (P)',
+    'close.preview': 'Close preview', 'row.tip': 'click to preview; drag to the composer to insert',
     'insert.tip': 'Insert reference', 'drop.hint': 'Release to insert the file reference into the composer', 'drop.hint.dir': 'Release to insert the folder tree',
     'add.ws': 'Add workspace', 'dir.tree.fail': 'Folder tree failed: ',
     'sel.count': '{n} selected', 'sel.insert': 'Insert', 'sel.clear': 'Clear',
@@ -78,9 +82,11 @@ const DICTS: Record<string, Record<string, string>> = {
     'edit': 'Edit', 'edit.save': 'Save', 'edit.discard': 'Discard', 'edit.cancel': 'Cancel',
     'edit.dirty': 'Modified', 'edit.saving': 'Saving…', 'edit.save.fail': 'Save failed: ',
     'edit.save.ok': 'Saved', 'edit.confirm.discard': 'Discard changes?', 'edit.readonly': 'Read-only',
-    'edit.preview.tip': 'Preview / Edit (P)',
+    'share.tip': 'Insert into chat (@reference)',
     'tab.files': 'Files', 'tab.preview': 'Preview', 'tab.settings': 'Settings',
-    'preview.empty': 'No preview yet. Click the 👁 icon on a file row to view it here.',
+    'md.source': 'Source', 'md.rendered': 'Rendered',
+    'md.source.tip': 'View Markdown source', 'md.rendered.tip': 'View rendered output',
+    'preview.empty': 'No preview yet. Click any file row to view it here.',
     'resize.tip': 'Drag from the corner to resize, double-click to reset',
     'settings.title': 'Panel settings', 'settings.general': 'General',
     'settings.hideNoise': 'Hide noise dirs', 'settings.hideNoise.desc': '.git · node_modules · dist …',
@@ -211,6 +217,54 @@ function iconFor(entry: WsEntry, open: boolean): React.ReactNode {
   if (entry.type === 'directory') return <FolderSvg open={open} />
   const meta = FILE_META[extOf(entry.name)] ?? DEFAULT_META
   return <FileSvg color={meta[0]} glyph={GLYPHS[meta[1]] ?? ''} />
+}
+
+// ---------- Markdown 渲染视图(React 元素构建,无 innerHTML,XSS 安全) ----------
+function renderMdInline(nodes: MdInline[], keyPrefix: string): React.ReactNode[] {
+  return nodes.map((n, i) => {
+    const key = `${keyPrefix}-${i}`
+    if (n.t === 'text') return <Fragment key={key}>{n.text}</Fragment>
+    if (n.t === 'code') return <code key={key} className={C('dshwe-md-code')}>{n.text}</code>
+    if (n.t === 'link') return <span key={key} className={C('dshwe-md-link')}>{n.text}</span>
+    if (n.t === 'b') return <strong key={key}>{renderMdInline(n.children, key)}</strong>
+    if (n.t === 'i') return <em key={key}>{renderMdInline(n.children, key)}</em>
+    return <s key={key}>{renderMdInline(n.children, key)}</s>
+  })
+}
+function renderMdBlocks(nodes: MdNode[], keyPrefix: string): React.ReactNode[] {
+  return nodes.map((n, i) => {
+    const key = `${keyPrefix}-${i}`
+    if (n.t === 'h') {
+      const Tag = `h${n.level}` as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6'
+      return <Tag key={key} className={C('dshwe-md-h') + ` ${C('dshwe-md-h' + n.level)}`}>{renderMdInline(n.inline, key)}</Tag>
+    }
+    if (n.t === 'p') return <p key={key} className={C('dshwe-md-p')}>{renderMdInline(n.inline, key)}</p>
+    if (n.t === 'code') {
+      return <pre key={key} className={C('dshwe-md-pre')}>{n.lang !== '' ? <span className={C('dshwe-md-lang')}>{n.lang}</span> : null}<code>{n.text}</code></pre>
+    }
+    if (n.t === 'quote') return <blockquote key={key} className={C('dshwe-md-quote')}>{renderMdBlocks(n.children, key)}</blockquote>
+    if (n.t === 'hr') return <hr key={key} className={C('dshwe-md-hr')} />
+    if (n.t === 'ul') {
+      return <ul key={key} className={C('dshwe-md-ul')}>{n.items.map((it, j) => <li key={`${key}-${j}`}>{renderMdInline(it, `${key}-${j}`)}</li>)}</ul>
+    }
+    if (n.t === 'ol') {
+      return <ol key={key} className={C('dshwe-md-ol')} start={n.start}>{n.items.map((it, j) => <li key={`${key}-${j}`}>{renderMdInline(it, `${key}-${j}`)}</li>)}</ol>
+    }
+    if (n.t === 'task') {
+      return <ul key={key} className={C('dshwe-md-task')}>{n.items.map((it, j) => (
+        <li key={`${key}-${j}`}><span className={C('dshwe-md-check') + (n.checked[j] ? ` ${C('dshwe-md-check-on')}` : '')} aria-hidden="true">{n.checked[j] ? '✓' : ''}</span>{renderMdInline(it, `${key}-${j}`)}</li>
+      ))}</ul>
+    }
+    // table
+    return (
+      <div key={key} className={C('dshwe-md-tablewrap')}>
+        <table className={C('dshwe-md-table')}>
+          <thead><tr>{n.head.map((c, j) => <th key={`${key}-h${j}`}>{renderMdInline(c, `${key}-h${j}`)}</th>)}</tr></thead>
+          <tbody>{n.rows.map((r, j) => <tr key={`${key}-r${j}`}>{r.map((c, k) => <td key={`${key}-r${j}c${k}`}>{renderMdInline(c, `${key}-r${j}c${k}`)}</td>)}</tr>)}</tbody>
+        </table>
+      </div>
+    )
+  })
 }
 
 // ---------- 共享状态(面板开关 / 输入桥) ----------
@@ -414,6 +468,8 @@ function Panel(props: {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [selAnchor, setSelAnchor] = useState<string | null>(null)
   const [tab, setTab] = useState<'files' | 'preview' | 'settings'>('files')
+  // MD 渲染视图切换(每个文件独立记忆初始为渲染视图;切文件时重置)
+  const [mdView, setMdView] = useState<'rendered' | 'source'>('rendered')
   const [c, setC] = useState(getCfg())
   useEffect(() => subscribeCfg(setC), [])
 
@@ -522,7 +578,7 @@ function Panel(props: {
       }))
     }
   }, [root])
-  const openPreview = (entry: WsEntry): void => { void loadPreviewPage(entry, 0); setTab('preview') }
+  const openPreview = (entry: WsEntry): void => { setMdView('rendered'); void loadPreviewPage(entry, 0); setTab('preview') }
   const previewPrev = (): void => { if (preview && preview.page > 0 && !preview.loading) void loadPreviewPage(preview.entry, preview.page - 1) }
   const previewNext = (): void => { if (preview && preview.data?.hasMore && !preview.loading) void loadPreviewPage(preview.entry, preview.page + 1) }
   // 「插入内容」:小文件(≤32KB)整文件取回
@@ -673,7 +729,7 @@ function Panel(props: {
     walk('')
     return out
   }
-  // 行点击:Shift 扩展选择区间,⌘/Ctrl 切换选择;普通点击保持原行为(目录展开 / 文件插入引用)
+  // 行点击:Shift 扩展选择区间,⌘/Ctrl 切换选择;普通点击:目录展开 / 文件打开预览(分享走左侧 @ 按钮)
   const onRowClick = (ev: React.MouseEvent, entry: WsEntry): void => {
     const isDir = entry.type === 'directory'
     if (ev.shiftKey || ev.metaKey || ev.ctrlKey) {
@@ -698,7 +754,7 @@ function Panel(props: {
     } else if (isDir) {
       toggle(entry.rel)
     } else {
-      insertMarker(entry)
+      openPreview(entry)
     }
   }
   // 批量插入所选:文件 → 引用;目录 → 目录树文本
@@ -730,17 +786,18 @@ function Panel(props: {
         onDragStart={(ev) => onDragStart(ev, entry)}
         onClick={(ev) => onRowClick(ev, entry)}
         onKeyDown={(ev) => {
-          if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); if (isDir) toggle(entry.rel); else insertMarker(entry) }
-          else if (ev.key === 'p' && !isDir) { ev.preventDefault(); void openPreview(entry) }
+          if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); if (isDir) toggle(entry.rel); else openPreview(entry) }
+          else if ((ev.key === '@' || ev.key === 'i') && !isDir) { ev.preventDefault(); insertMarker(entry) }
         }}>
         <span className={C('dshwe-chev-slot')}>{isDir ? <ChevronSvg open={isExp} /> : null}</span>
         {!isDir ? (
-          <button type="button" className={C('dshwe-preview-btn') + (isPreviewActive ? ` ${C('dshwe-preview-btn-on')}` : '')}
-            title={tr('edit.preview.tip')} aria-label={tr('edit.preview.tip')}
+          <button type="button" className={C('dshwe-share-btn') + (isPreviewActive ? ` ${C('dshwe-share-btn-on')}` : '')}
+            title={tr('share.tip')} aria-label={tr('share.tip')}
             onMouseDown={(e) => { e.preventDefault(); e.stopPropagation() }}
-            onClick={(e) => { e.stopPropagation(); void openPreview(entry) }}>
-            <svg viewBox="0 0 16 16" width={15} height={15} aria-hidden="true">
-              <path d="M1.5 8s2.6-4.5 6.5-4.5S14.5 8 14.5 8 11.9 12.5 8 12.5 1.5 8 1.5 8zM8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" fill="none" stroke="currentColor" strokeWidth={1.3} strokeLinejoin="round" />
+            onClick={(e) => { e.stopPropagation(); insertMarker(entry) }}>
+            <svg viewBox="0 0 24 24" width={14} height={14} aria-hidden="true">
+              <path d="M17 7 7 17" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M17 17H7V7" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
         ) : null}
@@ -813,6 +870,9 @@ function Panel(props: {
     if (isEdit && preview.dirty) metaBits.push(tr('edit.dirty'))
 
     let contentArea: React.ReactNode
+    const isMd = isMarkdownFile(preview.entry.name)
+    // MD 渲染视图只在整读成功、无分页时启用(分页内容不完整,渲染会断裂)
+    const mdRendered = isMd && !isEdit && !preview.loading && preview.error === null && !!d && !d.binary && d.hasMore !== true && preview.page === 0
     if (preview.loading) {
       contentArea = <div className={C('dshwe-note')}><span className={C('dshwe-spin')} />{tr('read')}</div>
     } else if (preview.error) {
@@ -825,6 +885,8 @@ function Panel(props: {
           onChange={(e) => updateEditContent(e.target.value)}
           spellCheck={false} />
       )
+    } else if (mdRendered && mdView === 'rendered') {
+      contentArea = <div className={C('dshwe-md')}>{renderMdBlocks(parseMarkdown(d?.content ?? ''), preview.entry.rel)}</div>
     } else {
       contentArea = <pre className={C('dshwe-preview-pre')}>{d?.content ?? ''}</pre>
     }
@@ -848,6 +910,13 @@ function Panel(props: {
             <>
               <button type="button" className={C('dshwe-pager-btn')} disabled={preview.page === 0 || preview.loading} onClick={previewPrev} title={tr('preview.prev')} aria-label={tr('preview.prev')}>‹</button>
               <button type="button" className={C('dshwe-pager-btn')} disabled={d?.hasMore !== true || preview.loading} onClick={previewNext} title={tr('preview.next')} aria-label={tr('preview.next')}>›</button>
+              {mdRendered ? (
+                <button type="button" className={C('dshwe-prevbtn') + (mdView === 'source' ? ` ${C('dshwe-prevbtn-on')}` : '')}
+                  onClick={() => setMdView(mdView === 'rendered' ? 'source' : 'rendered')}
+                  title={mdView === 'rendered' ? tr('md.source.tip') : tr('md.rendered.tip')}>
+                  {mdView === 'rendered' ? tr('md.source') : tr('md.rendered')}
+                </button>
+              ) : null}
               {canEdit ? <button type="button" className={C('dshwe-prevbtn')} onClick={() => void enterEditMode()}>{tr('edit')}</button> : null}
               <button type="button" className={C('dshwe-icobtn')} onClick={() => setPreview(null)} title={tr('close.preview')} aria-label={tr('close.preview')}>
                 <svg viewBox="0 0 16 16" width={13} height={13} aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" /></svg>
