@@ -28,6 +28,8 @@ const CLIENT_EXTERNALS: readonly string[] = [...PLATFORM_MODULES, RUNTIME_EXEMPT
 
 const CSS_PREFIX = '\0dsh-css:'
 const CSS_SUFFIX = '.mjs'
+// 相对虚拟 ID → 绝对路径映射(resolveId 建表,load 查表;虚拟 ID 本身不含本机路径)
+const cssAbsByRel = new Map<string, string>()
 
 /** Browser-safe wire layers a client bundle may inline. */
 const INLINE_SAFE = /^@deepseek-ai\/dsh-(host-apiproxy|session|llm|tools|brand)(\/|$)/
@@ -75,11 +77,15 @@ const client: UserConfig = {
       resolveId(source: string, importer: string | undefined) {
         if (!source.endsWith('.module.css')) return null
         const abs = importer !== undefined ? resolvePath(dirname(importer), source) : source
-        return CSS_PREFIX + abs + CSS_SUFFIX
+        // 虚拟 ID 只用裸文件名(bundle 注释不含任何本机路径);绝对路径走内存映射表
+        const rel = basename(abs)
+        cssAbsByRel.set(rel, abs)
+        return `${CSS_PREFIX}${rel}${CSS_SUFFIX}`
       },
       async load(virtualId: string) {
         if (!virtualId.startsWith(CSS_PREFIX)) return null
-        const fileId = virtualId.slice(CSS_PREFIX.length, -CSS_SUFFIX.length)
+        const rel = virtualId.slice(CSS_PREFIX.length, -CSS_SUFFIX.length)
+        const fileId = cssAbsByRel.get(rel) ?? resolvePath(rel)
         this.addWatchFile(fileId)
         const source = await readFile(fileId)
         const { code, exports: cssExports } = transform({
