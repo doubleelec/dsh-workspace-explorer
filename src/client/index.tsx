@@ -288,12 +288,105 @@ const closeDrawer = (): void => { setOpen(false) }
 const measurePopup = (): { top: number; height: number } => {
   // 移动端键盘弹起时 visualViewport.height 缩小,innerHeight 不变——取小者
   const vh = Math.min(window.innerHeight, window.visualViewport?.height ?? window.innerHeight)
-  const header = document.querySelector('[data-slot="conversation.session.header"]')
-  const composer = document.querySelector('[data-composer-card]')
-  const top = header ? Math.round(header.getBoundingClientRect().bottom) + 8 : 48
-  const bottomLimit = composer ? Math.round(composer.getBoundingClientRect().top) - 8 : vh - 48
+  const header = queryHeader()
+  const composer = queryComposer()
+  const hr = rectOf(header)
+  const top = isVisibleRect(hr) ? Math.round(hr.bottom) + 8 : 48
+  const cr = rectOf(composer)
+  const bottomLimit = isVisibleRect(cr) ? Math.round(cr.top) - 8 : vh - 48
   return { top, height: autoPopupHeight(top, bottomLimit, vh) }
 }
+
+// 全屏测量:只罩会话消息区。
+// 左边界顺输入框向上冒泡找会话列容器:输入框恒可见且必在会话列内,
+// 向上爬的第一个"明显比输入框宽"的可见祖先即会话列(收起 x=56 / 展开 x=280,
+// 实时跟随侧边栏伸缩)。这比查 [data-slot="sidebar"]/会话列槽位可靠 ——
+// 槽位可能是 0 宽占位、会话列可能有隐藏副本,冒泡只认有盒子的祖先。
+// 右 = 可见 details 栏左 edge - 8(没打开时退视口右 edge);
+// 上 = 固定 56(会话 header 恒 ~48 高;不量 header,它偶发被压成 0 高);
+// 下 = 视口底往上固定预留(输入框恒 ~92 高,留 132 稳露出来;不量输入框,DSH 升级改 DOM 也不怕)。
+const measureFullscreen = (): { top: number; left: number; width: number; height: number } => {
+  const vh = Math.min(window.innerHeight, window.visualViewport?.height ?? window.innerHeight)
+  const vw = window.innerWidth
+  const header = queryHeader()
+  const composer = queryComposer()
+  const details = pickVisible('[data-slot="details"]')
+  const headerRect = rectOf(header)
+  const composerRect = rectOf(composer)
+  const dtRect = rectOf(details)
+  // 会话列:从输入框向上冒泡。注意包输入框的栈容器虽宽、顶部却与输入框齐平,
+  // 必须跳过 —— 只要"更宽且向上延伸至少 100px"(盖住消息区)的可见祖先。
+  // 同时记下最深宽容器的 left(短会话列的极端 fallback,至少保证左侧让位正确)。
+  let colRect: DOMRect | null = null
+  let colLeft: number | null = null
+  if (composer instanceof HTMLElement && isVisibleRect(composerRect)) {
+    let p: HTMLElement | null = composer.parentElement
+    while (p && p !== document.body) {
+      const r = rectOf(p)
+      if (isVisibleRect(r) && r.width >= composerRect.width + 40) {
+        if (colLeft === null) colLeft = r.left
+        if (r.top <= composerRect.top - 100) { colRect = r; break }
+      }
+      p = p.parentElement
+    }
+  }
+  // 冒泡失败才退到槽位查询(只认可见节点)
+  if (!colRect) {
+    const col = queryConvCol(header)
+    const r = rectOf(col)
+    if (isVisibleRect(r)) colRect = r
+  }
+  const left = colRect ? Math.round(colRect.left) + 8 : colLeft !== null ? Math.round(colLeft) + 8 : 16
+  const right = isVisibleRect(dtRect) && dtRect.left > left ? Math.round(dtRect.left) - 8 : vw - 16
+  // 上:固定 56(header 恒 ~48 高;偶发 0 高时不拿它的 bottom,免得顶部掉到输入框下沿)
+  const top = 56
+  // 下:视口底往上固定预留 132(输入框恒 ~92 高,稳露出来)。
+  // 软兜底:输入框可见且顶部高于预留线(多行输入长高)时,用实测值往上收 —— 只收不探。
+  let bottomLimit = vh - 132
+  if (isVisibleRect(composerRect)) {
+    const measured = Math.round(composerRect.top) - 8
+    if (measured < bottomLimit) bottomLimit = measured
+  }
+  const out = {
+    top,
+    left,
+    width: Math.max(320, right - left),
+    height: Math.max(320, bottomLimit - top),
+  }
+  return out
+}
+
+// 可见节点挑选:页面可能有多个会话副本(非活跃会话的隐藏节点 rect 全 0),
+// 只选非零面积最大的;一个都不可见时返回 null(由调用方 fallback,不再用隐藏节点)
+const rectOf = (el: Element | null): DOMRect | null =>
+  el instanceof HTMLElement ? el.getBoundingClientRect() : null
+const isVisibleRect = (r: DOMRect | null): r is DOMRect =>
+  !!r && r.width > 0 && r.height > 0
+function pickVisible(sel: string): Element | null {
+  const all = Array.from(document.querySelectorAll(sel))
+  let best: Element | null = null
+  let bestArea = 0
+  for (const el of all) {
+    const r = rectOf(el)
+    if (!isVisibleRect(r)) continue
+    const area = r.width * r.height
+    if (area > bestArea) { bestArea = area; best = el }
+  }
+  return best
+}
+// composer 锚点:输入框容器(实测 data-slot="conversation.composer.bar",
+// 旧 [data-composer-card] 在当前壳不存在,仅作兼容 fallback)
+const queryComposer = (): Element | null =>
+  pickVisible('[data-slot="conversation.composer.bar"], [data-slot="conversation.composer"], [data-composer-card]')
+// 会话列锚点:只认可见节点 —— 可见 header 的会话祖先(且该祖先可见)优先,
+// 否则直接取面积最大的可见会话列。header 本身常被压成 0 高,不可靠时直接忽略它。
+const queryConvCol = (header: Element | null): Element | null => {
+  const viaHeader = header instanceof HTMLElement ? header.closest('[data-slot="conversation"]') : null
+  if (viaHeader instanceof HTMLElement && isVisibleRect(rectOf(viaHeader))) return viaHeader
+  return pickVisible('[data-slot="conversation"]')
+}
+const queryHeader = (): Element | null =>
+  pickVisible('[data-slot="conversation.session.header"]')
 
 // ---------- 输入桥接口:追加 @引用 文本 ----------
 interface WsBridge {
@@ -1039,7 +1132,13 @@ function DrawerRoot(props: {
   const [dragKind, setDragKind] = useState<'file' | 'dir' | null>(null)
   // 全屏:弹窗覆盖整个会话区(愿望:点一下展开看大文件,再点恢复)
   const [fullscreen, setFullscreen] = useState(false)
-  const toggleFullscreen = (): void => setFullscreen((v) => !v)
+  // 全屏矩形:只罩会话消息区,跟随会话列/composer 实时重测
+  const [fullRect, setFullRect] = useState({ top: 16, left: 16, width: 640, height: 480 })
+  // 切换全屏时同步算一次矩形(不等 effect),避免首帧闪错位
+  const toggleFullscreen = (): void => {
+    if (!fullscreen) setFullRect(measureFullscreen())
+    setFullscreen((v) => !v)
+  }
   const [c, setC] = useState(getCfg())
   useEffect(() => subscribeOpen(setOn), [])
   useEffect(() => subscribeCfg(setC), [])
@@ -1092,7 +1191,7 @@ function DrawerRoot(props: {
     const observed = new Set<Element>()
     const ro = new ResizeObserver(update)
     const bind = (): void => {
-      for (const el of Array.from(document.querySelectorAll('[data-slot="conversation.session.header"], [data-composer-card]'))) {
+      for (const el of Array.from(document.querySelectorAll('[data-slot="conversation.session.header"], [data-slot="conversation.composer.bar"], [data-slot="conversation.composer"], [data-composer-card]'))) {
         if (!observed.has(el)) { observed.add(el); ro.observe(el) }
       }
     }
@@ -1205,10 +1304,29 @@ function DrawerRoot(props: {
       document.removeEventListener('dragend', onDragEnd)
     }
   }, [])
+  // 全屏矩形:只罩会话消息区,跟随会话列/composer 实时重测(初始值只在 effect 跑之前闪一下)
+  useEffect(() => {
+    if (!fullscreen) return
+    const update = (): void => setFullRect(measureFullscreen())
+    update()
+    const observed = new Set<Element>()
+    const ro = new ResizeObserver(update)
+    const bind = (): void => {
+      for (const el of Array.from(document.querySelectorAll('[data-slot="conversation"], [data-slot="conversation.session.header"], [data-slot="conversation.composer.bar"], [data-slot="conversation.composer"]'))) {
+        if (!observed.has(el)) { observed.add(el); ro.observe(el) }
+      }
+    }
+    bind()
+    const mo = new MutationObserver(() => { bind(); update() })
+    mo.observe(document.body, { childList: true, subtree: true })
+    window.addEventListener('resize', update)
+    window.visualViewport?.addEventListener('resize', update)
+    return () => { ro.disconnect(); mo.disconnect(); window.removeEventListener('resize', update); window.visualViewport?.removeEventListener('resize', update) }
+  }, [fullscreen, on])
   return (
     <div className={C('dshwe-layer')}>
       {dragKind !== null ? <div className={C('dshwe-hint')}><div className={C('dshwe-hint-chip')}><svg viewBox="0 0 16 16" width={16} height={16} aria-hidden="true"><path d="M8 3.5v6M5.7 7.2L8 9.5l2.3-2.3M3.5 12.5h9" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" /></svg>{dragKind === 'dir' ? tr('drop.hint.dir') : tr('drop.hint')}</div></div> : null}
-      {on || closing ? <div data-dshwe-popup="" className={C('dshwe-popup') + (shown ? ` ${C('dshwe-popup-on')}` : '') + (fullscreen ? ` ${C('dshwe-popup-full')}` : '')} style={fullscreen ? undefined : { top: rect.top, height: popupH, width: popupW, '--dshwe-base-w': `${popupW}px` } as React.CSSProperties}><Panel {...props} onDraggingChange={setDragKind} fullscreen={fullscreen} onToggleFullscreen={toggleFullscreen} />{fullscreen ? null : <div className={C('dshwe-resize-corner')} onMouseDown={onResizeDown} onTouchStart={onResizeTouchStart} onDoubleClick={onResizeReset} title={tr('resize.tip')} role="separator" aria-orientation="horizontal" aria-label={tr('resize.tip')}><span className={C('dshwe-resize-corner-bar')} /></div>}</div> : null}
+      {on || closing ? <div data-dshwe-popup="" className={C('dshwe-popup') + (shown ? ` ${C('dshwe-popup-on')}` : '') + (fullscreen ? ` ${C('dshwe-popup-full')}` : '')} style={fullscreen ? { top: fullRect.top, left: fullRect.left, width: fullRect.width, height: fullRect.height } as React.CSSProperties : { top: rect.top, height: popupH, width: popupW, '--dshwe-base-w': `${popupW}px` } as React.CSSProperties}><Panel {...props} onDraggingChange={setDragKind} fullscreen={fullscreen} onToggleFullscreen={toggleFullscreen} />{fullscreen ? null : <div className={C('dshwe-resize-corner')} onMouseDown={onResizeDown} onTouchStart={onResizeTouchStart} onDoubleClick={onResizeReset} title={tr('resize.tip')} role="separator" aria-orientation="horizontal" aria-label={tr('resize.tip')}><span className={C('dshwe-resize-corner-bar')} /></div>}</div> : null}
     </div>
   )
 }

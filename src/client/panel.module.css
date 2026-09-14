@@ -20,11 +20,10 @@
   transition: opacity .18s ease, transform .18s ease, width .22s ease;
 }
 .dshwe-popup-on { opacity: 1; transform: translateY(0) scale(1); }
-/* ---- 全屏:覆盖整个会话区(看大文件/长 MD),再点恢复 ---- */
+/* ---- 全屏:只罩会话消息区(左侧跳过侧边栏,底部露出输入框),几何由行内样式实测 ---- */
 .dshwe-popup-full {
-  top: 16px !important; right: 16px !important; bottom: 16px !important; left: 16px !important;
-  width: auto !important; height: auto !important;
-  transform-origin: top center;
+  right: auto !important;
+  transform-origin: top left;
 }
 @media (prefers-reduced-motion: reduce) { .dshwe-popup { transition: none } }
 .dshwe-popup .dshwe-panel { position: static; top: auto; right: auto; bottom: auto; width: auto; height: auto; min-height: 0; flex: 1; border: 0; border-left: 0; border-radius: 0; box-shadow: none; pointer-events: auto; }
