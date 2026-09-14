@@ -24,6 +24,7 @@ Inspired by the VS Code / Cursor project tree, filling the gap of a missing dire
 - **Markdown that reads like Markdown** — `.md` / `.mdx` files render formatted (headings, lists, code blocks, quotes, tables, task lists) with a one-click source toggle. Zero-dependency renderer built on React elements — XSS-safe by construction, no sanitizer needed.
 - **Reference anything in one motion** — single click to share, drag & drop to the caret, Shift / ⌘ multi-select batch insert, or type `@` in the composer to fuzzy-find any file (up to 5000 entries, 10 levels deep) even with the panel closed.
 - **Edit without leaving** — preview panel turns into an editor (Save / Discard / Cancel) with external-change detection on save; writes go straight to disk.
+- **Fullscreen when it matters** — one click in the header expands the popup over the whole session area for big files and long Markdown; click again (or `Esc`) to go back.
 - **Stays out of the way** — the popup measures itself live between the session header and the composer, never covers the input box; size is corner-draggable with localStorage memory (double-click resets). Noise dirs hidden, sizes shown, relative/absolute reference format — all live-tunable.
 
 ## 🖥 Demo
@@ -54,6 +55,7 @@ Inspired by the VS Code / Cursor project tree, filling the gap of a missing dire
 - 🗂 **Lazy-loading tree** — directories load on demand; noise dirs (`node_modules`, `.git`, `dist`, `__pycache__`, …) are hidden automatically
 - 🎨 **File-type icons** — filled, color-coded document badges per extension (TS / JS / Python / JSON / Markdown / image / config / shell, …); amber folders that brighten when expanded; the actively previewed file gets a blue dot
 - 🖱 **Click to preview** — click a file row (or `Enter` / `Space`) to open it in the Preview tab; the **⏎ button** at the row's head inserts the `@path` reference into the composer (`@` / `i` shortcut works too)
+- ⛶ **Fullscreen mode** — the header toggle (next to close) expands the popup over the whole session area for big files / long Markdown; click again to restore, `Esc` exits fullscreen first
 - 🖱 **Drag & drop** — drop a file into the composer to insert at the caret (fullscreen dashed hint); dropping elsewhere appends to the end. **Folders are draggable too** — dropping a directory inserts a depth-limited compact tree listing
 - 🖱 **Multi-select & batch insert** — Shift / ⌘ click to select multiple rows, then insert all of them at once (files → references, folders → tree listings)
 - ⌨️ **`@` mention anywhere** — type `@` in the composer to fuzzy-find workspace files (name or path, 50 suggestions, 500-path lexicon highlight) — works even with the panel closed, via sessions-cwd auto-discovery

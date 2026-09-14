@@ -40,6 +40,7 @@ const DICTS: Record<string, Record<string, string>> = {
     'btn.ref': '插入引用', 'btn.content': '插入内容',
     'btn.content.tip': '把文件内容插入输入框', 'btn.content.no': '文件过大或二进制,无法内联',
     'sidebar.tooltip': '工作区文件', 'sidebar.label': '文件', refresh: '刷新', close: '关闭',
+    'fullscreen.on': '全屏', 'fullscreen.off': '退出全屏',
     'close.preview': '关闭预览', 'row.tip': '点击预览,拖拽到输入框插入',
     'insert.tip': '插入引用', 'drop.hint': '松开以插入文件引用到输入框', 'drop.hint.dir': '松开以插入目录树',
     'add.ws': '添加工作区', 'dir.tree.fail': '目录树生成失败: ',
@@ -74,6 +75,7 @@ const DICTS: Record<string, Record<string, string>> = {
     'btn.ref': 'Insert reference', 'btn.content': 'Insert content',
     'btn.content.tip': 'Insert the file content into the composer', 'btn.content.no': 'Too large or binary — cannot inline',
     'sidebar.tooltip': 'Workspace Files', 'sidebar.label': 'Files', refresh: 'Refresh', close: 'Close',
+    'fullscreen.on': 'Fullscreen', 'fullscreen.off': 'Exit fullscreen',
     'close.preview': 'Close preview', 'row.tip': 'click to preview; drag to the composer to insert',
     'insert.tip': 'Insert reference', 'drop.hint': 'Release to insert the file reference into the composer', 'drop.hint.dir': 'Release to insert the folder tree',
     'add.ws': 'Add workspace', 'dir.tree.fail': 'Folder tree failed: ',
@@ -453,6 +455,8 @@ function Panel(props: {
   useWorkspaces: (s: unknown) => unknown
   useSessions: (s: unknown) => unknown
   onDraggingChange: (v: 'file' | 'dir' | null) => void
+  fullscreen: boolean
+  onToggleFullscreen: () => void
 }) {
   const wsState = props.useWorkspaces((s: unknown) => s) as { items?: Array<{ workspaceId: string; path: string; title: string }>; recentWorkspaceId?: string; state?: string }
   const sessions = props.useSessions((s: unknown) => s) as { current?: string; byId?: Record<string, { cwd?: string }> }
@@ -974,6 +978,19 @@ function Panel(props: {
         <button type="button" className={C('dshwe-icobtn')} onClick={refresh} title={tr('refresh')} aria-label={tr('refresh')}>
           <svg viewBox="0 0 16 16" width={14} height={14} aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.61-3.89M13.5 1.5v3h-3" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" /></svg>
         </button>
+        <button type="button" className={C('dshwe-icobtn')} onClick={props.onToggleFullscreen}
+          title={props.fullscreen ? tr('fullscreen.off') : tr('fullscreen.on')}
+          aria-label={props.fullscreen ? tr('fullscreen.off') : tr('fullscreen.on')}>
+          {props.fullscreen ? (
+            <svg viewBox="0 0 24 24" width={14} height={14} aria-hidden="true">
+              <path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" width={14} height={14} aria-hidden="true">
+              <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+        </button>
         <button type="button" className={C('dshwe-icobtn')} onClick={closeDrawer} title={tr('close')} aria-label={tr('close')}>
           <svg viewBox="0 0 16 16" width={14} height={14} aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" /></svg>
         </button>
@@ -1020,6 +1037,9 @@ function DrawerRoot(props: {
   // 手动宽度:localStorage 持久化,优先于设置页三档;双击竖条清除回设置宽度
   const [manualW, setManualW] = useState<number | null>(() => loadManualWidth())
   const [dragKind, setDragKind] = useState<'file' | 'dir' | null>(null)
+  // 全屏:弹窗覆盖整个会话区(愿望:点一下展开看大文件,再点恢复)
+  const [fullscreen, setFullscreen] = useState(false)
+  const toggleFullscreen = (): void => setFullscreen((v) => !v)
   const [c, setC] = useState(getCfg())
   useEffect(() => subscribeOpen(setOn), [])
   useEffect(() => subscribeCfg(setC), [])
@@ -1036,16 +1056,21 @@ function DrawerRoot(props: {
     const t = setTimeout(() => setClosing(false), 200)
     return () => clearTimeout(t)
   }, [on])
-  // Esc 关闭弹窗
+  // Esc 关闭弹窗;全屏时先退全屏,再按才关
   useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => { if (e.key === 'Escape') closeDrawer() }
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key !== 'Escape') return
+      let handled = false
+      setFullscreen((v) => { if (v) { handled = true; return false } return v })
+      if (!handled) closeDrawer()
+    }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [])
   // 点击外部自动关闭:点中面板自身 / 输入框(composer) / 头部胶囊按钮都不关,
-  // 点聊天区等其它位置才关(避免打字定位光标、拖拽插入时误关)
+  // 点聊天区等其它位置才关(避免打字定位光标、拖拽插入时误关);全屏时不自动关
   useEffect(() => {
-    if (!on) return
+    if (!on || fullscreen) return
     const onDown = (e: PointerEvent): void => {
       const t = e.target instanceof HTMLElement ? e.target : null
       if (!t) return
@@ -1054,7 +1079,7 @@ function DrawerRoot(props: {
     }
     document.addEventListener('pointerdown', onDown, true)
     return () => document.removeEventListener('pointerdown', onDown, true)
-  }, [on])
+  }, [on, fullscreen])
   // 动态测量弹窗区域:header 底部 → composer 顶部;窗口尺寸/布局变化时实时更新
   // 加固点(针对忽高忽矮):①弹窗打开时强制重测一次;②composer 高度变化(多行输入)
   // 走同一 ResizeObserver;③会话切换导致 header/composer 替换时重新绑定节点;
@@ -1183,7 +1208,7 @@ function DrawerRoot(props: {
   return (
     <div className={C('dshwe-layer')}>
       {dragKind !== null ? <div className={C('dshwe-hint')}><div className={C('dshwe-hint-chip')}><svg viewBox="0 0 16 16" width={16} height={16} aria-hidden="true"><path d="M8 3.5v6M5.7 7.2L8 9.5l2.3-2.3M3.5 12.5h9" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" /></svg>{dragKind === 'dir' ? tr('drop.hint.dir') : tr('drop.hint')}</div></div> : null}
-      {on || closing ? <div data-dshwe-popup="" className={C('dshwe-popup') + (shown ? ` ${C('dshwe-popup-on')}` : '')} style={{ top: rect.top, height: popupH, width: popupW, '--dshwe-base-w': `${popupW}px` } as React.CSSProperties}><Panel {...props} onDraggingChange={setDragKind} /><div className={C('dshwe-resize-corner')} onMouseDown={onResizeDown} onTouchStart={onResizeTouchStart} onDoubleClick={onResizeReset} title={tr('resize.tip')} role="separator" aria-orientation="horizontal" aria-label={tr('resize.tip')}><span className={C('dshwe-resize-corner-bar')} /></div></div> : null}
+      {on || closing ? <div data-dshwe-popup="" className={C('dshwe-popup') + (shown ? ` ${C('dshwe-popup-on')}` : '') + (fullscreen ? ` ${C('dshwe-popup-full')}` : '')} style={fullscreen ? undefined : { top: rect.top, height: popupH, width: popupW, '--dshwe-base-w': `${popupW}px` } as React.CSSProperties}><Panel {...props} onDraggingChange={setDragKind} fullscreen={fullscreen} onToggleFullscreen={toggleFullscreen} />{fullscreen ? null : <div className={C('dshwe-resize-corner')} onMouseDown={onResizeDown} onTouchStart={onResizeTouchStart} onDoubleClick={onResizeReset} title={tr('resize.tip')} role="separator" aria-orientation="horizontal" aria-label={tr('resize.tip')}><span className={C('dshwe-resize-corner-bar')} /></div>}</div> : null}
     </div>
   )
 }

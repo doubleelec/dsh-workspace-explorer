@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### 新功能 Feature
+
+- **全屏模式** — 头部关闭键旁新增展开/还原按钮(Lucide `maximize` / `minimize` 现成图标),点一下弹窗覆盖整个会话区(看大文件/长 MD),再点恢复原尺寸;`Esc` 先退全屏再关闭;全屏时点外部不自动关、拖拽拉手隐藏 / **Fullscreen mode** — header toggle expands the popup over the whole session area and back; `Esc` exits fullscreen first.
+
 ## [0.7.1-fork.3] - 2026-09-12
 
 ### 移除 Removal
