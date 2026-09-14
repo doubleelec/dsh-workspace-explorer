@@ -303,7 +303,7 @@ const measurePopup = (): { top: number; height: number } => {
 // 实时跟随侧边栏伸缩)。这比查 [data-slot="sidebar"]/会话列槽位可靠 ——
 // 槽位可能是 0 宽占位、会话列可能有隐藏副本,冒泡只认有盒子的祖先。
 // 右 = 可见 details 栏左 edge - 8(没打开时退视口右 edge);
-// 上 = 固定 56(会话 header 恒 ~48 高;不量 header,它偶发被压成 0 高);
+// 上 = 固定 16(直接盖住会话 header 工具栏,多看一行是一行);
 // 下 = 视口底往上固定预留(输入框恒 ~92 高,留 132 稳露出来;不量输入框,DSH 升级改 DOM 也不怕)。
 const measureFullscreen = (): { top: number; left: number; width: number; height: number } => {
   const vh = Math.min(window.innerHeight, window.visualViewport?.height ?? window.innerHeight)
@@ -338,8 +338,8 @@ const measureFullscreen = (): { top: number; left: number; width: number; height
   }
   const left = colRect ? Math.round(colRect.left) + 8 : colLeft !== null ? Math.round(colLeft) + 8 : 16
   const right = isVisibleRect(dtRect) && dtRect.left > left ? Math.round(dtRect.left) - 8 : vw - 16
-  // 上:固定 56(header 恒 ~48 高;偶发 0 高时不拿它的 bottom,免得顶部掉到输入框下沿)
-  const top = 56
+  // 上:固定 16,直接盖住会话 header 工具栏(全屏看文件时它没用)
+  const top = 16
   // 下:视口底往上固定预留 132(输入框恒 ~92 高,稳露出来)。
   // 软兜底:输入框可见且顶部高于预留线(多行输入长高)时,用实测值往上收 —— 只收不探。
   let bottomLimit = vh - 132
