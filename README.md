@@ -91,6 +91,30 @@ See [`docs/install.md`](./docs/install.md) for details.
 3. Click the **⏎ button** at a row's head (or drag the file into the composer, or type `@` + filename) to reference it, then send.
 4. Use the **Settings** tab at the top of the popup (or DSH Settings → Workspace Explorer) to adjust panel behavior.
 
+### Local development
+
+Two isolated environments — edit once, verify in dev, then ship to prod:
+
+|  | Dev | Prod |
+|---|---|---|
+| Profile | `dev` | `web` |
+| URL | http://127.0.0.1:3090 | http://127.0.0.1:3080 |
+| Plugin source | symlink → this repo | real copy (decoupled from source) |
+
+```powershell
+# 1) edit src/, then build (lib/ is what DSH actually loads)
+npm run build
+
+# 2) refresh 3090 — changes appear instantly (symlink, no reinstall, no restart)
+
+# 3) after testing, sync to prod (no npm publish needed)
+dsh plugin --profile web install
+
+# 4) refresh 3080 — done, no restart needed
+```
+
+**Rule of thumb:** 3090 follows the source automatically; 3080 only eats what you manually `install` into it — half-baked edits never leak into prod. Details in [`docs/local-debugging.md`](./docs/local-debugging.md).
+
 ## Project Structure
 
 ```

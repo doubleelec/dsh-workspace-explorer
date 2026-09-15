@@ -91,6 +91,30 @@ dsh plugin --profile web add -w @doubleelec/dsh-workspace-explorer@latest
 3. 点行首 **⏎ 按钮**(或把文件拖进输入框,或打 `@` + 文件名)引用它,然后发送
 4. 用弹窗顶部的「设置」Tab(或 DSH 设置 → 工作区文件)调整面板行为
 
+### 本地开发
+
+两套隔离环境 —— 改一次,dev 验证,测好再进正式版:
+
+|  | 开发版 | 正式版 |
+|---|---|---|
+| Profile | `dev` | `web` |
+| 地址 | http://127.0.0.1:3090 | http://127.0.0.1:3080 |
+| 插件来源 | symlink 直指本仓库 | 实体副本(与源码脱钩) |
+
+```powershell
+# 1) 改 src/,然后构建(lib/ 才是 DSH 真正加载的)
+npm run build
+
+# 2) 刷新 3090 —— 改动立刻见效(symlink,免重装、免重启)
+
+# 3) 测好后同步到正式版(无需 npm 发布)
+dsh plugin --profile web install
+
+# 4) 刷新 3080 —— 完事,无需重启
+```
+
+**记住一条就行:**3090 自动跟源码走;3080 只吃你亲手 `install` 进去的东西 —— 开发中的半成品永远漏不进正式版。详细步骤见 [`docs/local-debugging.md`](./docs/local-debugging.md)。
+
 ## 目录结构
 
 ```
