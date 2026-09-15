@@ -32,7 +32,7 @@ const NS = 'dsh-workspace-explorer'
 const DICTS: Record<string, Record<string, string>> = {
   zh: {
     'panel.title': '工作区文件', 'ws.current': '当前目录', 'search.ph': '搜索文件(仅已加载目录)…',
-    hint: '点击文件:预览 | 点击 ↙ 或拖拽:插入到对话 | Shift 或 Ctrl + 点击:多选', 'empty.title': '还没有可浏览的工作区。选择一个项目文件夹,即可在这里查看目录文件。',
+    hint: '点击文件:预览 | 点击 ↙ 或拖拽:插入到对话 | Shift/Ctrl + 点击:多选', 'empty.title': '还没有可浏览的工作区。选择一个项目文件夹,即可在这里查看目录文件。',
     'empty.add': '+ 选择文件夹作为工作区', 'loading.ws': '正在加载工作区…', hit: '匹配 {n} 项',
     'hit.none': '没有匹配「{q}」的文件(搜索范围:已加载目录)', truncated: '已截断,仅显示前 {n} 项',
     loading: '加载中…', 'load.fail': '加载失败: ', read: '读取中…', 'read.fail': '读取失败: ',
@@ -67,7 +67,7 @@ const DICTS: Record<string, Record<string, string>> = {
   },
   en: {
     'panel.title': 'Workspace Files', 'ws.current': 'Current dir', 'search.ph': 'Search files (loaded dirs only)…',
-    hint: 'Click file: preview | ↙ or drag: insert into chat | Shift or Ctrl + click: multi-select', 'empty.title': 'No browsable workspace yet. Pick a project folder to view its files.',
+    hint: 'Click file: preview | ↙ or drag: insert into chat | Shift/Ctrl + click: multi-select', 'empty.title': 'No browsable workspace yet. Pick a project folder to view its files.',
     'empty.add': '+ Choose a folder as workspace', 'loading.ws': 'Loading workspaces…', hit: '{n} match(es)',
     'hit.none': 'No files match "{q}" (search covers loaded dirs)', truncated: 'Truncated: showing the first {n}',
     loading: 'Loading…', 'load.fail': 'Load failed: ', read: 'Reading…', 'read.fail': 'Read failed: ',
