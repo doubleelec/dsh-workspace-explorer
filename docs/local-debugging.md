@@ -88,14 +88,27 @@ cmd /c mklink /D "$p" "D:\Users\Elec\Documents\dsh-plugins-workspace\dsh-workspa
 - web profile 的插件是**实体副本**(2026-09-15 由 symlink 换成实体,不停服操作),
   路径 `~/.dsh/profiles/web/node_modules/@doubleelec/dsh-workspace-explorer/`。
 - 源码更新后,正式环境**不会**自动跟进 —— 这是故意的(开发抖动不进正式版)。
-- 测试通过后的发布流程见 `docs/publish.md`:先发 npm,再
+- 测试通过后的正式版发布流程见 `docs/publish.md`:先发 npm,再
   `dsh plugin --profile web add @doubleelec/dsh-workspace-explorer@latest`。
 
-### ⚠️ 不要在 web 下跑 pnpm install
+### 把本地修改应用到正式版(无需 npm 发布)
 
-web 的 `package.json` 仍保留 `file:..\..\..\Documents\dsh-plugins-workspace`
-旧引用(指向已不存在的旧路径),跑 `pnpm install` 会重建 symlink/报错。
-正式发布前先清理该引用,或直接等 npm 发布后走标准安装流程。
+web 的 `package.json` 用 `file:` 指向本地插件仓库(2026-09-15 已修正到新路径),
+所以本地改完、3090 测好后,直接同步到正式版,无需走 npm 发布:
+
+```powershell
+# 1) 插件仓库里构建
+cd D:\Users\Elec\Documents\dsh-plugins-workspace\dsh-workspace-explorer
+npm run build
+
+# 2) 同步到 web(从本地 file: 路径重装实体副本;3080 运行中不受影响)
+dsh plugin --profile web install
+
+# 3) 刷新 3080 页面验证
+```
+
+> 正式版是**实体副本**不是 symlink:重装前 3080 跑的是旧副本内存里的代码,
+> 重装瞬间换文件,已加载的请求不受影响;刷新页面即吃到新代码,无需重启 DSH。
 
 ---
 
