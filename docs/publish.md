@@ -11,7 +11,7 @@
 ## 发布流程
 
 ```powershell
-cd D:\Users\Elec\Documents\dsh-plugins-workspace\dsh-workspace-explorer
+cd <repo>   # 本仓库的本地检出目录
 
 # 1) 登录(走官方源;2FA 要输 OTP)
 npm login --registry=https://registry.npmjs.org/

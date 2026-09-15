@@ -1,7 +1,7 @@
 # DSH 插件本地调试指南(Windows)
 
+> 约定:下文 `<repo>` 指本仓库的本地检出目录(如 `D:\path\to\dsh-workspace-explorer`)。
 > 2026-09-15 重写:macOS 旧路径(`@jiyr0119` scope、`~/workspaceforme`)已失效。
-> 本机现状:插件仓库 `D:\Users\Elec\Documents\dsh-plugins-workspace\dsh-workspace-explorer`,
 > 包名 `@doubleelec/dsh-workspace-explorer`。
 
 ## 环境一览
@@ -36,7 +36,7 @@ dev/
 ├── cordis.patch.yml          # [] (空,插件行由 dsh.plugin add 机制或包内 cordis.patch.yml 提供)
 └── node_modules/
     └── @doubleelec/
-        └── dsh-workspace-explorer → D:\Users\Elec\Documents\dsh-plugins-workspace\dsh-workspace-explorer (symlink)
+        └── dsh-workspace-explorer → <repo> (symlink)
 ```
 
 `package.json` 全文:
@@ -66,7 +66,7 @@ dev/
 ```powershell
 $p = "$env:USERPROFILE\.dsh\profiles\dev\node_modules\@doubleelec\dsh-workspace-explorer"
 Remove-Item -Recurse -Force $p   # 只删链接/副本,不碰源码
-cmd /c mklink /D "$p" "D:\Users\Elec\Documents\dsh-plugins-workspace\dsh-workspace-explorer"
+cmd /c mklink /D "$p" "<repo>"
 ```
 
 > 创建 symlink 需要提权(管理员审批一次)。
@@ -77,7 +77,7 @@ cmd /c mklink /D "$p" "D:\Users\Elec\Documents\dsh-plugins-workspace\dsh-workspa
 修改代码 → npm run build → 刷新浏览器(不需要重启 DSH)
 ```
 
-1. 在 `D:\Users\Elec\Documents\dsh-plugins-workspace\dsh-workspace-explorer` 改代码
+1. 在 `<repo>` 改代码
 2. 执行 `npm run build` 构建(`lib/` 是 DSH 实际加载的)
 3. 刷新 http://127.0.0.1:3090 即可看到变化
 
@@ -98,7 +98,7 @@ web 的 `package.json` 用 `file:` 指向本地插件仓库(2026-09-15 已修正
 
 ```powershell
 # 1) 插件仓库里构建
-cd D:\Users\Elec\Documents\dsh-plugins-workspace\dsh-workspace-explorer
+cd <repo>
 npm run build
 
 # 2) 同步到 web(从本地 file: 路径重装实体副本;3080 运行中不受影响)
@@ -120,7 +120,7 @@ dsh plugin --profile web install
 
 ```powershell
 (Get-Item "$env:USERPROFILE\.dsh\profiles\dev\node_modules\@doubleelec\dsh-workspace-explorer" -Force).Target
-# 应该显示 → D:\Users\Elec\Documents\dsh-plugins-workspace\dsh-workspace-explorer
+# 应该显示 → <repo>
 ```
 
 如果不存在,按上文"重建 dev symlink"重建。
