@@ -641,9 +641,11 @@ function Panel(props: {
     return type === 'directory' ? `@${p}/` : `@${p}`
   }
 
-  // 整文件预览:≤4MB 一次加载全文、面板内滚动查看,不再按行分页;
-  // 超大文件(>4MB)才走分页(保内存),此时保留上一页/下一页
-  const WHOLE_MAX = 4 * 1024 * 1024
+  // 整文件预览:≤512KB 一次加载全文、面板内滚动查看,不再按行分页;
+  // 超大文件(>512KB)才走分页(保内存、保渲染流畅),此时保留上一页/下一页
+  // (512KB 约装 25 万字,已覆盖绝大多数文档;上限与 host WHOLE_MAX_BYTES 一致,
+  //  更大时 whole 自动回落分页,MD 渲染门限 hasMore!==true 照旧生效)
+  const WHOLE_MAX = 512 * 1024
   const loadPreviewPage = useCallback(async (entry: WsEntry, page: number, keepMode = false): Promise<void> => {
     setPreview((prev) => ({
       entry, loading: true, data: null, error: null, page,
@@ -957,7 +959,7 @@ function Panel(props: {
     const d = preview.data
     const isEdit = preview.mode === 'edit'
     const canInline = !preview.loading && !preview.error && !!d && !d.binary && (d.size ?? 0) <= 32768
-    const canEdit = !preview.loading && !preview.error && !!d && !d.binary && (d.size ?? 0) <= 4 * 1024 * 1024
+    const canEdit = !preview.loading && !preview.error && !!d && !d.binary && (d.size ?? 0) <= WHOLE_MAX
     const metaBits: string[] = []
     if (preview.entry.size != null) metaBits.push(fmtSize(preview.entry.size))
     if (d?.lineCount != null && d.lineCount > 0) metaBits.push(tr('preview.lines', { n: d.lineCount }))

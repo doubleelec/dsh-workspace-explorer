@@ -62,7 +62,7 @@ Inspired by the VS Code / Cursor project tree, filling the gap of a missing dire
 - 🌓 **Theme-aware** — built entirely on DSH's `--dsw-alias-*` design tokens; adapts to light/dark with a native dialog look (16px radius, lv3 shadow)
 - 🔍 **Search & filter** — filter files by name across the whole tree (up to 5000 entries / 10 levels, match count shown)
 - 📝 **Markdown rendering** — `.md` / `.mdx` preview rendered by default (headings, bold/italic/strike, code blocks with language tag, quotes, ordered/unordered/task lists, tables, horizontal rules); one-click toggle back to source; oversized paged files fall back to source automatically
-- ✏️ **Preview tab** — whole-file view (≤ 4 MB in one read, paged beyond that with total lines & current page); insert the reference, or paste the full content for small files (≤ 32 KB)
+- ✏️ **Preview tab** — whole-file view (≤ 512 KB in one read, paged beyond that with total lines & current page); insert the reference, or paste the full content for small files (≤ 32 KB)
 - 📝 **File editing** — click "Edit" in the preview panel to enter textarea mode; save writes directly to disk with change detection (warns if the file was modified externally)
 - 🌐 **i18n** — zh/en dictionaries registered through DSH's locale service; the panel follows the DSH UI language
 
@@ -127,7 +127,7 @@ dsh-workspace-explorer/
 | Capability | Mechanism |
 |---|---|
 | Directory listing | Host `fs` via `resolveRel`-guarded root+rel (`/dsh-we/api/list`), directories first, 400-entry cap |
-| File peek | Whole read ≤ 4 MB, paged scan with line-offset cache beyond (`/dsh-we/api/peek`); binary sniffed, ≤ 32 KB inlinable |
+| File peek | Whole read ≤ 512 KB, paged scan with line-offset cache beyond (`/dsh-we/api/peek`); binary sniffed, ≤ 32 KB inlinable |
 | Tree / search index | Depth/budget-limited recursion (`/dsh-we/api/tree`, up to 10 levels / 5000 entries) |
 | File write | `/dsh-we/api/write` with size-based external-change detection |
 | Host→Client RPC | Same-origin `fetch POST /dsh-we/api/*` (path-confined, no arbitrary-path reads) |
@@ -157,7 +157,7 @@ Focused on the two lines that actually matter to the product: the **read path** 
 - [x] Demo language toggle, GitHub Pages preview, demo GIF, storefront screenshots
 - [x] npm package + `dsh.bundle` contract + awesome-dsh-plugin listing
 - [x] Multi-target references: folder drag (compact tree) + multi-select batch insert
-- [x] Whole-file preview (≤ 4 MB) with paged fallback for large files
+- [x] Whole-file preview (≤ 512 KB) with paged fallback for large files
 - [x] Preview-first interaction: row click previews, ⏎ button shares, keyboard `@` / `i`
 - [x] Markdown rendering (zero-dep, XSS-safe) with source toggle
 - [x] In-panel file editing with external-change detection

@@ -3,7 +3,8 @@
  *
  * 通过 webServer 注册 /dsh-we/api/* JSON 路由(list/peek/tree/config),供浏览器客户端调用。
  * - list : 列一个目录层级(懒加载)
- * - peek : 按行分页读取文本文件(offset/limit),支持「插入完整内容」(whole,≤32KB)
+ * - peek : 按行分页读取文本文件(offset/limit),whole 整读(预览 ≤512KB);
+ *   「插入内容」复用 whole 分支,客户端另限 32KB 防刷屏
  * - tree : 递归生成目录树节点(限深/限条目),供目录拖拽与多选批量插入
  * - config: 运行期配置(噪声目录 / 最大条目 / 预览行数)
  *
@@ -56,7 +57,14 @@ export const cfg = {
   peekMaxLines: 60,
 }
 
-const WHOLE_MAX_BYTES = 32 * 1024          // 「插入完整内容」上限
+/**
+ * 预览整读上限:whole=true 且 size ≤ WHOLE_MAX_BYTES 时一次返回全文,更大自动回落分页。
+ * 取值说明:100KB 文档约装 5 万字,已覆盖绝大多数文档;512KB 留约 5 倍余量,
+ * 本地回环传输毫秒级、渲染无卡顿。「插入内容」复用 whole 分支,但客户端另限
+ * 32KB(防刷屏聊天框),与此上限互不干扰。老客户端只发 offset/limit,走分页
+ * 路径,不受影响——协议兼容,无需版本号。
+ */
+const WHOLE_MAX_BYTES = 512 * 1024     // 预览/编辑整读上限(插入内容客户端另限 32KB)
 const SMALL_FILE_MAX = 4 * 1024 * 1024     // 整读阈值:小于它直接 split 行,行数精确
 const PAGE_SCAN_CHUNK = 256 * 1024         // 大文件分页扫描的块大小
 const TREE_MAX_DEPTH = 10                  // 目录树最大递归深度(支持深层级搜索)
@@ -115,6 +123,8 @@ export async function listDir(abs: string, baseRel: string): Promise<{ entries: 
 /**
  * 按行读取 [offset, offset+limit) 一页内容。
  * 小文件(≤4MB)整读、行数精确;大文件块扫描定位行区间,行数未知(null)。
+ * 注意:预览/编辑整读走 `whole` 分支(上限 WHOLE_MAX_BYTES),此处 SMALL_FILE_MAX
+ * 只决定分页查询走"整读内存分支"还是"块扫描分支",与 whole 上限是两个独立阈值。
  */
 /** @internal 按行读取一页内容。 */
 export async function readLinesPage(abs: string, offset: number, limit: number): Promise<{ content: string; startLine: number; lineCount: number | null; hasMore: boolean }> {
@@ -262,7 +272,7 @@ export default {
             const size = info.size
             const binary = await sniffBinary(path, size)
             if (binary) return writeJson(res, { ok: true, binary: true, size, lineCount: null, startLine: 0, content: '', hasMore: false })
-            // whole:小文件(≤32KB)直接返回完整内容,供「插入内容」
+            // whole:预览/编辑整读(≤WHOLE_MAX_BYTES 一次返回全文,更大自动回落分页)
             if (body.whole === true && size <= WHOLE_MAX_BYTES) {
               const lines = (await readFile(path)).toString('utf-8').split('\n')
               if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop()

@@ -146,6 +146,46 @@ describe('readLinesPage (small file)', () => {
   })
 })
 
+describe('peek whole 上限(预览整读 ≤512KB,超限回落分页)', () => {
+  // 直接驱动 /dsh-we/api/peek 路由:whole:true 在 512KB 内回全文,超限回落分页。
+  // 回归:32KB< size ≤512KB 的 md 曾被截断为第一页(hasMore=true),导致渲染门限进不去。
+  async function callPeek(body: Record<string, unknown>): Promise<Record<string, any>> {
+    const plugin = (await import('../src/index')).default as any
+    const routes: any[] = []
+    plugin.apply({ webServer: { register: (r: any) => routes.push(r) } })
+    const peek = routes.find((r) => r.path === '/dsh-we/api/peek')!.handler
+    const raw = JSON.stringify(body)
+    const req: any = {
+      url: '/dsh-we/api/peek', method: 'POST', headers: {},
+      async *[Symbol.asyncIterator]() { yield raw },
+    }
+    let out = ''
+    const res: any = { statusCode: 200, writeHead(s: number) { this.statusCode = s }, end(b: any) { out = String(b) } }
+    await peek(req, res)
+    return JSON.parse(out)
+  }
+
+  it('100KB 文件 whole:true 返回全文(hasMore=false)', async () => {
+    const line = 'lorem ipsum dolor sit amet\n'
+    const text = line.repeat(Math.ceil((100 * 1024) / line.length)).replace(/\n$/, '')
+    await writeFile(join(dir, 'mid.md'), text)
+    const json = await callPeek({ root: dir, rel: 'mid.md', whole: true })
+    expect(json.ok).toBe(true)
+    expect(json.hasMore).toBe(false)
+    expect(json.content).toBe(text)
+  })
+
+  it('超限(>512KB) whole:true 自动回落分页(兼容老客户端分页路径)', async () => {
+    const line = 'abcdefghij0123456789\n'
+    const text = line.repeat(Math.ceil((600 * 1024) / line.length))
+    await writeFile(join(dir, 'over.md'), text)
+    const json = await callPeek({ root: dir, rel: 'over.md', whole: true })
+    expect(json.ok).toBe(true)
+    expect(json.hasMore).toBe(true)
+    expect(json.content.length).toBeLessThan(text.length)
+  })
+})
+
 describe('readLinesPage / pageScanLarge (large file >4MB)', () => {
   const N = 100_000
   let file: string
