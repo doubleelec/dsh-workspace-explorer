@@ -80,6 +80,8 @@ dsh plugin --profile web add -w @doubleelec/dsh-workspace-explorer@latest
 
 > ℹ️ **pnpm note**: modern pnpm (9/10) refuses to add a dependency at the workspace root (`ERR_PNPM_ADDING_TO_ROOT`), hence the `-w` flag above. Alternative: create `~/.dsh/profiles/web/.npmrc` containing `ignore-workspace-root-check=true`.
 
+> 🛠 **Maintainer shortcut — local install without publishing**: after testing in dev (3090), build and install straight from the repo into prod (3080) as a decoupled copy — `npm run build`, then `dsh plugin --profile web add -w "file://D:/path/to/dsh-workspace-explorer"`, then refresh 3080. No npm publish needed. Full steps in [`docs/install.md`](./docs/install.md#方式二本地目录安装无需发布维护者路径).
+
 > ⚠️ **Common misconception**: a listing alone never auto-installs anything — users still click install. The full UI now appears after install (native bundle — no boot errors).
 
 See [`docs/install.md`](./docs/install.md) for details.

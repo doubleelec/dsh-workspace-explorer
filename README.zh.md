@@ -80,6 +80,8 @@ dsh plugin --profile web add -w @doubleelec/dsh-workspace-explorer@latest
 
 > ℹ️ **pnpm 提示**:现代 pnpm(9/10)会拒绝在 workspace root 直接 add(`ERR_PNPM_ADDING_TO_ROOT`),故命令带 `-w`。另一种做法:在 `~/.dsh/profiles/web/.npmrc` 写入 `ignore-workspace-root-check=true`。
 
+> 🛠 **维护者捷径 —— 本地安装无需发布**:dev(3090)测好后,构建完直接从仓库装进正式版(3080),装的是与源码脱钩的实体副本 —— `npm run build`,再 `dsh plugin --profile web add -w "file://D:/path/to/dsh-workspace-explorer"`,刷新 3080 即可。无需 npm 发布。完整步骤见 [`docs/install.md`](./docs/install.md#方式二本地目录安装无需发布维护者路径)。
+
 > ⚠️ **常见误解**:收录本身不会自动安装任何东西 —— 用户仍需点安装。安装后即出现完整 UI(原生 bundle,无启动报错)。
 
 详细步骤见 [`docs/install.md`](./docs/install.md)。
