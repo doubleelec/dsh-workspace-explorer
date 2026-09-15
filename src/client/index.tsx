@@ -12,7 +12,9 @@ import styles from './panel.module.css'
 import { basename, extOf, fmtSize, formatTreeBlock } from './format'
 import { isMarkdownFile, parseMarkdown } from './markdown'
 import type { MdInline, MdNode } from './markdown'
+import { isMermaidLang, loadMermaid } from './mermaid'
 import { autoPopupHeight, clampPopupHeight, clampPopupWidth, loadManualHeight, loadManualWidth, saveManualHeight, saveManualWidth } from './popupLayout'
+import { clearSavedPreview, getSavedMdView, getSavedPreview, getSavedTab, saveMdView, savePreviewRef, savePreviewTab, shouldRestorePreview } from './previewState'
 
 const MARKER = 'application/x-dsh-ws-file'
 const C = (k: string): string => styles[k] ?? k
@@ -53,6 +55,9 @@ const DICTS: Record<string, Record<string, string>> = {
     'tab.files': '文件', 'tab.preview': '预览', 'tab.settings': '设置',
     'md.source': '源码', 'md.rendered': '渲染',
     'md.source.tip': '查看 Markdown 源码', 'md.rendered.tip': '查看渲染效果',
+    'mermaid.render': '渲染图表', 'mermaid.loading': '图表加载中…',
+    'mermaid.source': '看源码', 'mermaid.diagram': '看图表',
+    'mermaid.retry': '重试', 'mermaid.fail': '图表渲染失败: ',
     'preview.empty': '还没有预览。点击任意文件行，即可在这里查看。',
     'resize.tip': '左下角拖拽调整大小，双击恢复自动',
     'settings.title': '面板设置', 'settings.general': '通用',
@@ -88,6 +93,9 @@ const DICTS: Record<string, Record<string, string>> = {
     'tab.files': 'Files', 'tab.preview': 'Preview', 'tab.settings': 'Settings',
     'md.source': 'Source', 'md.rendered': 'Rendered',
     'md.source.tip': 'View Markdown source', 'md.rendered.tip': 'View rendered output',
+    'mermaid.render': 'Render diagram', 'mermaid.loading': 'Loading diagram…',
+    'mermaid.source': 'Source', 'mermaid.diagram': 'Diagram',
+    'mermaid.retry': 'Retry', 'mermaid.fail': 'Diagram render failed: ',
     'preview.empty': 'No preview yet. Click any file row to view it here.',
     'resize.tip': 'Drag from the corner to resize, double-click to reset',
     'settings.title': 'Panel settings', 'settings.general': 'General',
@@ -233,6 +241,52 @@ function renderMdInline(nodes: MdInline[], keyPrefix: string): React.ReactNode[]
     return <s key={key}>{renderMdInline(n.children, key)}</s>
   })
 }
+// ---------- Mermaid 图表块:点击才从 CDN 懒加载渲染,失败回落源码 ----------
+function MermaidBlock(props: { code: string; idKey: string }) {
+  const [state, setState] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle')
+  const [svg, setSvg] = useState('')
+  const [errMsg, setErrMsg] = useState('')
+  const [showSource, setShowSource] = useState(false)
+  const hostRef = useRef<HTMLDivElement | null>(null)
+  const idRef = useRef(`dshwe-mm-${props.idKey.replace(/[^a-zA-Z0-9_-]/g, '')}-${Math.random().toString(36).slice(2)}`)
+  const renderNow = (): void => {
+    setState('loading')
+    setErrMsg('')
+    loadMermaid()
+      .then((api) => api.render(idRef.current, props.code))
+      .then(({ svg }) => { setSvg(svg); setShowSource(false); setState('ok') })
+      .catch((err) => { setErrMsg(String((err as Error)?.message ?? err)); setState('error') })
+  }
+  // mermaid 输出的 svg 由 mermaid(securityLevel: strict) 负责清洗后注入
+  useEffect(() => {
+    if (state === 'ok' && hostRef.current) hostRef.current.innerHTML = svg
+  }, [state, svg])
+  // 切换文件时重置(同一组件复用 idKey 变化即新图表)
+  useEffect(() => { setState('idle'); setSvg(''); setErrMsg(''); setShowSource(false) }, [props.code])
+  return (
+    <div className={C('dshwe-mm')}>
+      <div className={C('dshwe-mm-bar')}>
+        <span className={C('dshwe-md-lang')}>mermaid</span>
+        {state === 'idle' ? (
+          <button type="button" className={C('dshwe-prevbtn')} onClick={renderNow}>{tr('mermaid.render')}</button>
+        ) : state === 'loading' ? (
+          <span className={C('dshwe-note')}><span className={C('dshwe-spin')} />{tr('mermaid.loading')}</span>
+        ) : state === 'ok' ? (
+          <button type="button" className={C('dshwe-prevbtn')} onClick={() => setShowSource((v) => !v)}>
+            {showSource ? tr('mermaid.diagram') : tr('mermaid.source')}
+          </button>
+        ) : (
+          <button type="button" className={C('dshwe-prevbtn')} onClick={renderNow}>{tr('mermaid.retry')}</button>
+        )}
+      </div>
+      {state === 'error' ? <div className={C('dshwe-note dshwe-note-err')}>{tr('mermaid.fail')}{errMsg}</div> : null}
+      {state === 'ok' && !showSource ? <div ref={hostRef} className={C('dshwe-mm-svg')} /> : null}
+      {(state === 'idle' || state === 'loading' || state === 'error' || showSource) ? (
+        <pre className={C('dshwe-md-pre')}><code>{props.code}</code></pre>
+      ) : null}
+    </div>
+  )
+}
 function renderMdBlocks(nodes: MdNode[], keyPrefix: string): React.ReactNode[] {
   return nodes.map((n, i) => {
     const key = `${keyPrefix}-${i}`
@@ -242,6 +296,7 @@ function renderMdBlocks(nodes: MdNode[], keyPrefix: string): React.ReactNode[] {
     }
     if (n.t === 'p') return <p key={key} className={C('dshwe-md-p')}>{renderMdInline(n.inline, key)}</p>
     if (n.t === 'code') {
+      if (isMermaidLang(n.lang)) return <MermaidBlock key={key} code={n.text} idKey={key} />
       return <pre key={key} className={C('dshwe-md-pre')}>{n.lang !== '' ? <span className={C('dshwe-md-lang')}>{n.lang}</span> : null}<code>{n.text}</code></pre>
     }
     if (n.t === 'quote') return <blockquote key={key} className={C('dshwe-md-quote')}>{renderMdBlocks(n.children, key)}</blockquote>
@@ -564,9 +619,9 @@ function Panel(props: {
   const [preview, setPreview] = useState<{ entry: WsEntry; loading: boolean; data: PeekResult | null; error: string | null; page: number; mode: 'preview' | 'edit'; editContent: string; dirty: boolean; saving: boolean; saveError: string | null } | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [selAnchor, setSelAnchor] = useState<string | null>(null)
-  const [tab, setTab] = useState<'files' | 'preview' | 'settings'>('files')
+  const [tab, setTab] = useState<'files' | 'preview' | 'settings'>(() => getSavedTab())
   // MD 渲染视图切换(每个文件独立记忆初始为渲染视图;切文件时重置)
-  const [mdView, setMdView] = useState<'rendered' | 'source'>('rendered')
+  const [mdView, setMdView] = useState<'rendered' | 'source'>(() => getSavedMdView())
   const [c, setC] = useState(getCfg())
   useEffect(() => subscribeCfg(setC), [])
 
@@ -602,11 +657,23 @@ function Panel(props: {
 
   useEffect(() => {
     if (root === null) return
-    setDirs({}); setExpanded({}); setPreview(null); setSelected(new Set()); setSelAnchor(null)
+    setDirs({}); setExpanded({}); setSelected(new Set()); setSelAnchor(null)
     void loadDir(root, '')
+    // 同 root 才恢复上次预览(重开弹窗即回到上次文件;root 切换则不清记忆,切回来还能恢复)
+    const saved = getSavedPreview()
+    if (shouldRestorePreview(saved, root)) {
+      setMdView(getSavedMdView())
+      void loadPreviewPage(
+        { name: saved.name, type: 'file', path: `${root.replace(/\/+$/, '')}/${saved.rel}`, rel: saved.rel, size: saved.size },
+        0,
+      )
+    } else {
+      setPreview(null)
+    }
     // 同步工作区根目录给 @ 触发源
     setActiveRoot(root)
     return () => setActiveRoot(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [root, loadDir])
 
   // 噪声目录开关变化时,重新加载已展开的目录 + 清除 @ 触发源的文件缓存
@@ -677,7 +744,14 @@ function Panel(props: {
       }))
     }
   }, [root])
-  const openPreview = (entry: WsEntry): void => { setMdView('rendered'); void loadPreviewPage(entry, 0); setTab('preview') }
+  const openPreview = (entry: WsEntry): void => {
+    setMdView('rendered')
+    saveMdView('rendered')
+    if (root !== null) savePreviewRef(root, entry.rel, entry.name, entry.size)
+    setTab('preview')
+    savePreviewTab('preview')
+    void loadPreviewPage(entry, 0)
+  }
   const previewPrev = (): void => { if (preview && preview.page > 0 && !preview.loading) void loadPreviewPage(preview.entry, preview.page - 1) }
   const previewNext = (): void => { if (preview && preview.data?.hasMore && !preview.loading) void loadPreviewPage(preview.entry, preview.page + 1) }
   // 「插入内容」:小文件(≤32KB)整文件取回
@@ -1009,13 +1083,13 @@ function Panel(props: {
               <button type="button" className={C('dshwe-pager-btn')} disabled={d?.hasMore !== true || preview.loading} onClick={previewNext} title={tr('preview.next')} aria-label={tr('preview.next')}>›</button>
               {mdRendered ? (
                 <button type="button" className={C('dshwe-prevbtn') + (mdView === 'source' ? ` ${C('dshwe-prevbtn-on')}` : '')}
-                  onClick={() => setMdView(mdView === 'rendered' ? 'source' : 'rendered')}
+                  onClick={() => { const v = mdView === 'rendered' ? 'source' : 'rendered'; setMdView(v); saveMdView(v) }}
                   title={mdView === 'rendered' ? tr('md.source.tip') : tr('md.rendered.tip')}>
                   {mdView === 'rendered' ? tr('md.source') : tr('md.rendered')}
                 </button>
               ) : null}
               {canEdit ? <button type="button" className={C('dshwe-prevbtn')} onClick={() => void enterEditMode()}>{tr('edit')}</button> : null}
-              <button type="button" className={C('dshwe-icobtn')} onClick={() => setPreview(null)} title={tr('close.preview')} aria-label={tr('close.preview')}>
+              <button type="button" className={C('dshwe-icobtn')} onClick={() => { setPreview(null); clearSavedPreview(); setTab('files'); savePreviewTab('files') }} title={tr('close.preview')} aria-label={tr('close.preview')}>
                 <svg viewBox="0 0 16 16" width={13} height={13} aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" /></svg>
               </button>
             </>
@@ -1091,17 +1165,17 @@ function Panel(props: {
       <div className={C('dshwe-tabs')} role="tablist">
         <button type="button" role="tab" aria-selected={tab === 'files'}
           className={C('dshwe-tab') + (tab === 'files' ? ` ${C('dshwe-tab-on')}` : '')}
-          onClick={() => setTab('files')}>
+          onClick={() => { setTab('files'); savePreviewTab('files') }}>
           <TabFolderSvg /><span>{tr('tab.files')}</span><span className={C('dshwe-tab-ind')} />
         </button>
         <button type="button" role="tab" aria-selected={tab === 'preview'}
           className={C('dshwe-tab') + (tab === 'preview' ? ` ${C('dshwe-tab-on')}` : '')}
-          onClick={() => setTab('preview')}>
+          onClick={() => { setTab('preview'); savePreviewTab('preview') }}>
           <svg viewBox="0 0 16 16" width={13} height={13} aria-hidden="true"><path d="M1.5 8s2.6-4.5 6.5-4.5S14.5 8 14.5 8 11.9 12.5 8 12.5 1.5 8 1.5 8zM8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" fill="none" stroke="currentColor" strokeWidth={1.3} strokeLinejoin="round" /></svg><span>{tr('tab.preview')}</span><span className={C('dshwe-tab-ind')} />
         </button>
         <button type="button" role="tab" aria-selected={tab === 'settings'}
           className={C('dshwe-tab') + (tab === 'settings' ? ` ${C('dshwe-tab-on')}` : '')}
-          onClick={() => setTab('settings')}>
+          onClick={() => { setTab('settings'); savePreviewTab('settings') }}>
           <GearSvg /><span>{tr('tab.settings')}</span><span className={C('dshwe-tab-ind')} />
         </button>
       </div>

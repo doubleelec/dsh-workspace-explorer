@@ -188,6 +188,13 @@
 .dshwe-md-check-on { background: var(--dsw-alias-state-business-primary, #4176e6); border-color: transparent; }
 .dshwe-md-hr { margin: 12px 0; border: 0; border-top: 1px solid var(--dsw-alias-border-l3, rgba(128,128,128,.2)); }
 .dshwe-md-link { color: var(--dsw-alias-state-business-primary, #4176e6); }
+/* ---- Mermaid 图表块(点击才渲染;svg 缩放适配窄弹窗) ---- */
+.dshwe-mm { margin: 8px 0; border: 1px solid var(--dsw-alias-border-l3, rgba(128,128,128,.2)); border-radius: 10px; background: var(--dsw-alias-bg-layer-1, #222); overflow: hidden; }
+.dshwe-mm-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; }
+.dshwe-mm-bar .dshwe-md-lang { position: static; }
+.dshwe-mm-svg { padding: 4px 10px 10px; overflow: auto; display: flex; justify-content: center; }
+.dshwe-mm-svg svg { max-width: 100%; height: auto; }
+.dshwe-mm .dshwe-md-pre { margin: 0 10px 10px; }
 .dshwe-md-tablewrap { margin: 8px 0; overflow: auto; border: 1px solid var(--dsw-alias-border-l3, rgba(128,128,128,.2)); border-radius: 10px; }
 .dshwe-md-table { border-collapse: collapse; width: 100%; font-size: 12px; }
 .dshwe-md-table th, .dshwe-md-table td { padding: 6px 10px; border-bottom: 1px solid var(--dsw-alias-border-l3, rgba(128,128,128,.2)); text-align: left; vertical-align: top; }

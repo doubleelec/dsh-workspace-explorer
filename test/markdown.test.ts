@@ -60,9 +60,11 @@ describe('parseMarkdown', () => {
     expect(table).toMatchObject({ t: 'table' })
   })
 
-  it('never emits raw html nodes', () => {
+  it('escapes raw html as text (XSS-safe via React escaping)', () => {
     const nodes = parseMarkdown('<script>alert(1)</script>\n\n<img src=x onerror=y>')
-    expect(JSON.stringify(nodes)).not.toContain('<script>')
+    // parser 没有 html 节点类型:原始标记只能落在 text 里,由 React 渲染时转义
+    expect(JSON.stringify(nodes)).not.toContain('"t":"html"')
     expect(nodes[0]).toMatchObject({ t: 'p' })
+    expect(nodes[1]).toMatchObject({ t: 'p' })
   })
 })

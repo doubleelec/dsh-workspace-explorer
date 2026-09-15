@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-09-16
+
+### 新功能 Feature
+
+- **Mermaid 图表渲染** — `.md` 预览里 ` ```mermaid ` 块显示「渲染图表」按钮,点击才从 CDN 懒加载(mermaid@10,jsdelivr 主 + unpkg 备)画图,可切回源码;`securityLevel: strict`,无网/CSP 拦截/语法报错时回落源码 + 重试;包体积仅 +6KB(mermaid 不打进 bundle,按需拉取),深浅色跟随系统 / **Mermaid diagrams** — `mermaid` code blocks render on demand via CDN lazy-load with source fallback; only +6KB to the bundle.
+- **预览状态恢复** — 关闭重开文件浏览器回到上次状态:Tab(文件/预览/设置)+ 预览文件(只读重读最新内容)+ MD 渲染/源码视图;点 ✕ 关预览清记忆,换工作区不跨 root 恢复;mermaid 渲染态不记(重开回未渲染,不自动拉 CDN) / **Preview restore** — reopening the panel restores the tab, the previewed file and the MD view; mermaid stays unrendered until clicked.
+
+### 修复 Fix
+
+- **Markdown XSS 单测断言纠正** — `never emits raw html nodes` 误断言序列化文本不含 `<script>` 字符;改为断言无 `html` 类型节点(原始标记只进 text 节点,由 React 渲染时转义),10 例全过 / **Fixed a wrong XSS test assertion** — assert no `html` node type instead of absence of the literal string.
+
 ## [0.8.0] - 2026-09-15
 
 ### 版本 Version
