@@ -141,7 +141,7 @@ dsh-workspace-explorer/
 
 ## Version
 
-Current version **v0.7.1-fork.3** — **Preview-first interaction** (row click previews, ⏎ shares), **Markdown rendering**, and **single-package cleanup** (dynamic paste variant removed).
+Current version **v0.8.0** — **Preview-first interaction** (row click previews, ↙ shares), **Markdown rendering**, **scoped fullscreen**, and **single-package cleanup** (dynamic paste variant removed).
 See [CHANGELOG.md](./CHANGELOG.md) for release notes.
 
 ## Roadmap

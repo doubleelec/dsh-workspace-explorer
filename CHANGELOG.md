@@ -1,6 +1,12 @@
 # Changelog
 
-## [0.7.1-fork.4] - 2026-09-15
+## [Unreleased]
+
+## [0.8.0] - 2026-09-15
+
+### 版本 Version
+
+- **去 `-fork` 后缀,独立版本线** — 从上游 fork 演进为独立产品,版本号 `0.7.1-fork.4` → `0.8.0`(新 minor:全屏/Markdown 渲染/预览优先均为新功能);包 scope 同步为 `@doubleelec`;此后 `npm publish` 直发 `latest`,无需 `--tag` / **Independent version line** — dropped the `-fork` suffix (`0.7.1-fork.4` → `0.8.0`); publishes go to `latest` from now on.
 
 ### 新功能 Feature
 

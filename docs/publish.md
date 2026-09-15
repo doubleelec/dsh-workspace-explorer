@@ -21,9 +21,8 @@ npm login --registry=https://registry.npmjs.org/
 npm run build
 npm run typecheck
 
-# 3) 发布 —— 版本号含 `-fork`(semver 预发布),必须显式指定 dist-tag,
-#    否则 npm 报错 "You must specify a tag using --tag"
-npm publish --registry=https://registry.npmjs.org/ --tag fork
+# 3) 发布 —— 正式版(无 semver 预发布后缀)直发 `latest`,无需 `--tag`
+npm publish --registry=https://registry.npmjs.org/
 
 # 4) 验证
 npm view @doubleelec/dsh-workspace-explorer version --registry=https://registry.npmjs.org/
@@ -31,7 +30,8 @@ npm view @doubleelec/dsh-workspace-explorer version --registry=https://registry.
 
 说明:
 
-- `--tag fork`:预发布版本不会污染 `latest` 标签;用户安装用 `dsh plugin add @doubleelec/dsh-workspace-explorer@fork` 或显式版本号。正式版去掉 `-fork` 后缀后可正常发 `latest`。
+- 正式版直发 `latest`;历史预发布版(`0.7.1-fork.4` 及之前)曾用 `--tag fork`(semver 预发布后缀必须显式 tag,见 git 历史)。
+- 用户安装:`dsh plugin add @doubleelec/dsh-workspace-explorer@latest`(或显式版本号)。
 - `prepublishOnly` 会自动再构建一次,构建产物抖动(CSS 类名哈希顺序)属正常,提交即可。
 - 发错 72 小时内可撤回:`npm unpublish @doubleelec/dsh-workspace-explorer@<version> --registry=https://registry.npmjs.org/`。
 - 包内容清单:`lib/` + `dsh.plugin.json` + `manifest.json` + docs(见 `package.json` 的 `files` 字段)。
@@ -41,7 +41,7 @@ npm view @doubleelec/dsh-workspace-explorer version --registry=https://registry.
 源码推送正常走 `git push elec main`(见仓库既有流程);npm 发完后打 tag:
 
 ```powershell
-git tag v0.7.1-fork.4
+git tag v0.8.0
 # (用存量凭证推送,见既有发布流程)
-git push elec v0.7.1-fork.4
+git push elec v0.8.0
 ```
