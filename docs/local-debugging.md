@@ -1,197 +1,133 @@
-# DSH 插件本地调试指南
+# DSH 插件本地调试指南(Windows)
 
-## 启动本地 DSH 开发环境（端口 3090）
+> 2026-09-15 重写:macOS 旧路径(`@jiyr0119` scope、`~/workspaceforme`)已失效。
+> 本机现状:插件仓库 `D:\Users\Elec\Documents\dsh-plugins-workspace\dsh-workspace-explorer`,
+> 包名 `@doubleelec/dsh-workspace-explorer`。
 
-```bash
-# 方式一：使用 dsh web dev（推荐，已配置 alias）
-dsh web dev
+## 环境一览
 
-# 方式二：直接指定 profile 和端口
+| 环境 | profile | 端口 | 插件来源 | 用途 |
+|---|---|---|---|---|
+| 正式 | `web` | 3080 | 实体副本(`node_modules` 内真实文件) | 日常使用,不碰源码 |
+| 开发 | `dev` | 3090 | symlink → 插件仓库 | 改代码→build→刷新即生效 |
+
+> **注意:** 3080 与 3090 完全隔离,互不影响。正式版 web 的插件是**实体副本**,
+> 不是 symlink —— 源码目录改名/移动不影响正在运行的 3080。
+
+## 启动开发环境(端口 3090)
+
+```powershell
 dsh --profile dev --port 3090
 ```
 
-启动后访问 http://127.0.0.1:3090
+启动后访问 http://127.0.0.1:3090(首次启动会打印带 token 的 URL)。
 
-> **注意：** 3080 是正式版（npm 安装的插件），3090 是开发版（本地链接的插件），两者完全隔离，互不影响。
+> **注意:** 不要用 `dsh web --port 3090` —— `dsh web` 写死了 web profile,
+> 会去动 3080 正式环境。开发环境必须用 `dsh --profile dev`。
 
----
+## dev profile 结构
 
-## 将本地插件链接到 3090 环境
+`$env:USERPROFILE\.dsh\profiles\dev\`:
 
-### 1. 编辑 dev profile 的 package.json
-
-```bash
-vim ~/.dsh/profiles/dev/package.json
+```
+dev/
+├── package.json              # file:..\..\..\Documents\dsh-plugins-workspace\dsh-workspace-explorer
+├── pnpm-workspace.yaml       # nodeLinker: hoisted
+├── cordis.patch.yml          # [] (空,插件行由 dsh.plugin add 机制或包内 cordis.patch.yml 提供)
+└── node_modules/
+    └── @doubleelec/
+        └── dsh-workspace-explorer → D:\Users\Elec\Documents\dsh-plugins-workspace\dsh-workspace-explorer (symlink)
 ```
 
-添加插件依赖和 bundles 配置：
+`package.json` 全文:
 
 ```json
 {
   "name": "dsh-profile-dev",
   "private": true,
-  "dependencies": {
-    "@jiyr0119/dsh-workspace-explorer": "file:/Users/jonathan/workspaceforme/dsh-workspace-explorer",
-    "dshmarket": "^1.15.0"
-  },
   "dsh": {
     "profile": {
       "bundles": [
         "@deepseek-ai/dsh-base",
         "@deepseek-ai/dsh-web-app",
-        "dshmarket",
-        "@jiyr0119/dsh-workspace-explorer"
-      ]
+        "@doubleelec/dsh-workspace-explorer"
+      ],
+      "patchReload": "live"
     }
+  },
+  "dependencies": {
+    "@doubleelec/dsh-workspace-explorer": "file:..\\..\\..\\Documents\\dsh-plugins-workspace\\dsh-workspace-explorer"
   }
 }
 ```
 
-### 2. 安装依赖
+### 重建 dev symlink(搬迁/重装后)
 
-```bash
-cd ~/.dsh/profiles/dev
-pnpm install
+```powershell
+$p = "$env:USERPROFILE\.dsh\profiles\dev\node_modules\@doubleelec\dsh-workspace-explorer"
+Remove-Item -Recurse -Force $p   # 只删链接/副本,不碰源码
+cmd /c mklink /D "$p" "D:\Users\Elec\Documents\dsh-plugins-workspace\dsh-workspace-explorer"
 ```
 
-### 3. 用 symlink 替换 npm 版本（关键步骤）
-
-```bash
-# 删除 pnpm 安装的版本
-rm -rf ~/.dsh/profiles/dev/node_modules/@jiyr0119/dsh-workspace-explorer
-
-# 创建 symlink 指向本地项目
-ln -s /Users/jonathan/workspaceforme/dsh-workspace-explorer ~/.dsh/profiles/dev/node_modules/@jiyr0119/dsh-workspace-explorer
-```
-
-### 4. 验证链接
-
-```bash
-ls -la ~/.dsh/profiles/dev/node_modules/@jiyr0119/dsh-workspace-explorer
-# 应该显示 → /Users/jonathan/workspaceforme/dsh-workspace-explorer
-```
-
----
+> 创建 symlink 需要提权(管理员审批一次)。
 
 ## 开发工作流
 
 ```
-修改代码 → npm run build → 刷新浏览器（不需要重启 DSH）
+修改代码 → npm run build → 刷新浏览器(不需要重启 DSH)
 ```
 
-1. 在本地项目目录修改代码
-2. 执行 `npm run build` 构建
+1. 在 `D:\Users\Elec\Documents\dsh-plugins-workspace\dsh-workspace-explorer` 改代码
+2. 执行 `npm run build` 构建(`lib/` 是 DSH 实际加载的)
 3. 刷新 http://127.0.0.1:3090 即可看到变化
 
-**注意：** symlink 方式下，DSH 直接读取 `lib/` 目录的构建产物，所以只需要 build，不需要重启服务。
-
 ---
 
-## 快捷脚本
+## 正式环境 web 说明
 
-### 添加新插件
+- web profile 的插件是**实体副本**(2026-09-15 由 symlink 换成实体,不停服操作),
+  路径 `~/.dsh/profiles/web/node_modules/@doubleelec/dsh-workspace-explorer/`。
+- 源码更新后,正式环境**不会**自动跟进 —— 这是故意的(开发抖动不进正式版)。
+- 测试通过后的发布流程见 `docs/publish.md`:先发 npm,再
+  `dsh plugin --profile web add @doubleelec/dsh-workspace-explorer@latest`。
 
-```bash
-~/.dsh/profiles/dev/add-plugin.sh @jiyr0119/my-plugin ~/workspaceforme/my-plugin
-```
+### ⚠️ 不要在 web 下跑 pnpm install
 
-### 移除插件
-
-```bash
-~/.dsh/profiles/dev/rm-plugin.sh @jiyr0119/my-plugin
-```
-
----
-
-## 发布新版本
-
-```bash
-# 1. 升级版本号
-# package.json 和 dsh.plugin.json 中的 version 同步修改
-
-# 2. 运行测试
-npm test
-
-# 3. 登录 npm（如果未登录）
-npm login
-
-# 4. 发布
-npm publish
-```
+web 的 `package.json` 仍保留 `file:..\..\..\Documents\dsh-plugins-workspace`
+旧引用(指向已不存在的旧路径),跑 `pnpm install` 会重建 symlink/报错。
+正式发布前先清理该引用,或直接等 npm 发布后走标准安装流程。
 
 ---
 
 ## 常见问题
 
-### Q: 刷新后插件没有加载？
+### Q: 刷新后插件没有加载?
 
-检查 symlink 是否存在：
-```bash
-ls -la ~/.dsh/profiles/dev/node_modules/@jiyr0119/dsh-workspace-explorer
+检查 symlink 是否存在:
+
+```powershell
+(Get-Item "$env:USERPROFILE\.dsh\profiles\dev\node_modules\@doubleelec\dsh-workspace-explorer" -Force).Target
+# 应该显示 → D:\Users\Elec\Documents\dsh-plugins-workspace\dsh-workspace-explorer
 ```
 
-如果不存在，重新执行步骤 3 创建 symlink。
+如果不存在,按上文"重建 dev symlink"重建。
 
-### Q: 修改代码后刷新没有变化？
+### Q: 修改代码后刷新没有变化?
 
-确保已执行 `npm run build`。symlink 只是链接目录，不会自动构建。
+确保已执行 `npm run build`。symlink 只是链接目录,不会自动构建。
 
-### Q: 3090 端口被占用？
+### Q: 3090 端口被占用?
 
-```bash
-# 查找占用端口的进程
-lsof -nP -iTCP:3090 -sTCP:LISTEN
-
-# 终止进程
-kill <PID>
+```powershell
+netstat -ano | Select-String ':3090 ' | Select-String 'LISTENING'
+taskkill /PID <PID> /F
 ```
 
-### Q: 想用 npm 注册的正式版本测试？
+### Q: 想用 npm 注册的正式版本测试?
 
-```bash
-# 删除 symlink，重新安装 npm 版本
-rm ~/.dsh/profiles/dev/node_modules/@jiyr0119/dsh-workspace-explorer
-cd ~/.dsh/profiles/dev
+```powershell
+$p = "$env:USERPROFILE\.dsh\profiles\dev\node_modules\@doubleelec\dsh-workspace-explorer"
+Remove-Item -Force $p   # 只删 symlink 本体,不加 -Recurse
+cd "$env:USERPROFILE\.dsh\profiles\dev"
 pnpm install
 ```
-
----
-
-## 目录结构
-
-```
-~/.dsh/profiles/
-├── web/                          # 正式版（3080）
-│   ├── package.json              # npm 安装的插件
-│   ├── node_modules/
-│   └── cordis.patch.yml
-│
-└── dev/                          # 开发版（3090）
-    ├── package.json              # file: 依赖
-    ├── node_modules/
-    │   └── @jiyr0119/
-    │       └── dsh-workspace-explorer → /path/to/local/project  (symlink)
-    ├── add-plugin.sh             # 添加插件脚本
-    ├── rm-plugin.sh              # 移除插件脚本
-    └── cordis.patch.yml
-
-/path/to/local/project/
-├── src/                          # 源码
-├── lib/                          # 构建产物（DSH 实际加载的）
-├── dsh.plugin.json               # 插件配置
-└── package.json
-```
-
----
-
-## ⚠️ 重要提醒
-
-**不要用 `file:` 依赖 + `pnpm install` 的方式！**
-
-pnpm 的 `file:` 依赖会在 store 里创建副本，rebuild 后不会自动更新。必须：
-
-1. `pnpm install` 安装依赖
-2. **删除** pnpm 安装的版本
-3. **手动创建** 直接指向本地目录的 symlink
-
-这样 rebuild 后只需要刷新浏览器，不需要重启服务。
