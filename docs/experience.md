@@ -7,7 +7,7 @@
 
 ## 一、DSH 插件形态:原生 npm 包 / Plugin shape
 
-本插件为原生单包:`dsh plugin --profile web add @elec/dsh-workspace-explorer@latest`,持久安装,重启保留,支持 dsh-market 一键安装。(历史上的动态粘贴版已在 v0.7.2 移除,不再维护。)
+本插件为原生单包:`dsh plugin --profile web add @doubleelec/dsh-workspace-explorer@latest`,持久安装,重启保留,支持 dsh-market 一键安装。(历史上的动态粘贴版已在 v0.7.2 移除,不再维护。)
 
 ## 二、原生包架构(三件套)/ Native package architecture
 

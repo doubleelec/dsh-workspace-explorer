@@ -6,4 +6,4 @@
 # 注意:作用域包名必须加引号(YAML 中 @ 不能作为裸标量起始字符,否则 dsh web 启动解析补丁直接失败)。
 - insert:
     - id: elec-workspace-explorer
-      name: '@elec/dsh-workspace-explorer'
+      name: '@doubleelec/dsh-workspace-explorer'

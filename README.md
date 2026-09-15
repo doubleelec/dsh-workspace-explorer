@@ -2,7 +2,7 @@
 
 > Self-maintained fork by [doubleelec](https://github.com/doubleelec) — based on
 > [Jiyr0119/dsh-workspace-explorer](https://github.com/Jiyr0119/dsh-workspace-explorer) v0.7.1 (MIT).
-> npm package: `@elec/dsh-workspace-explorer`.
+> npm package: `@doubleelec/dsh-workspace-explorer`.
 
 **[English](README.md)** | [中文](README.zh.md)
 
@@ -73,7 +73,7 @@ Inspired by the VS Code / Cursor project tree, filling the gap of a missing dire
 One command installs the full plugin — no build step, no config changes. The npm package ships a native host half (`lib/index.js`, webServer JSON routes `/dsh-we/api/list|peek|tree|config|write`) **and** a browser bundle (`lib/client.js` via `dsh.plugin.json`).
 
 ```bash
-dsh plugin --profile web add -w @elec/dsh-workspace-explorer@latest
+dsh plugin --profile web add -w @doubleelec/dsh-workspace-explorer@latest
 ```
 
 (or click the install button in the DSH market). After install, a **“Workspace Files” pill (name + icon)** appears in the session header; restart or hard-refresh the web UI if needed. This is the zero-config, no-build path.
@@ -100,7 +100,7 @@ dsh-workspace-explorer/
 ├── LICENSE               # MIT
 ├── CHANGELOG.md          # Release notes
 ├── manifest.json         # Plugin metadata
-├── package.json          # npm package (@elec/dsh-workspace-explorer)
+├── package.json          # npm package (@doubleelec/dsh-workspace-explorer)
 ├── demo/
 │   ├── index.html        # Interactive mock preview (GitHub Pages)
 │   └── preview.gif       # Demo animation (README)

@@ -2,7 +2,7 @@
 
 > 自维护 fork（[doubleelec](https://github.com/doubleelec)）—— 基于
 > [Jiyr0119/dsh-workspace-explorer](https://github.com/Jiyr0119/dsh-workspace-explorer) v0.7.1（MIT）。
-> npm 包：`@elec/dsh-workspace-explorer`。
+> npm 包：`@doubleelec/dsh-workspace-explorer`。
 
 [English](README.md) | **中文**
 
@@ -73,7 +73,7 @@
 一条命令装好完整插件,无需构建、无需改任何配置。npm 包同时提供原生 Host 半区(`lib/index.js`,webServer JSON 路由 `/dsh-we/api/list|peek|tree|config|write`)和浏览器 bundle(`lib/client.js` 经 `dsh.plugin.json`)。
 
 ```bash
-dsh plugin --profile web add -w @elec/dsh-workspace-explorer@latest
+dsh plugin --profile web add -w @doubleelec/dsh-workspace-explorer@latest
 ```
 
 (或在 DSH 市场点击安装按钮)。安装后会话头部即出现**「工作区文件」胶囊(名称 + 图标)**;必要时重启或硬刷新 Web UI。这是零配置、免构建的路径。
@@ -100,7 +100,7 @@ dsh-workspace-explorer/
 ├── LICENSE               # MIT
 ├── CHANGELOG.md          # 变更记录
 ├── manifest.json         # 插件元信息
-├── package.json          # npm 包(@elec/dsh-workspace-explorer)
+├── package.json          # npm 包(@doubleelec/dsh-workspace-explorer)
 ├── demo/
 │   ├── index.html        # 交互式模拟预览(GitHub Pages)
 │   └── preview.gif       # 演示动图(README)

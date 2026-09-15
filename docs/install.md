@@ -3,7 +3,7 @@
 唯一安装方式:原生安装(`dsh plugin add` / 商店)。
 
 ```bash
-dsh plugin --profile web add -w @elec/dsh-workspace-explorer@latest
+dsh plugin --profile web add -w @doubleelec/dsh-workspace-explorer@latest
 ```
 
 npm 包同时提供原生 Host 半区(`lib/index.js`,webServer JSON 路由 `/dsh-we/api/list|peek|tree|config|write`)和浏览器 bundle(`lib/client.js` 经 `dsh.plugin.json`),一条命令装好后会话头部即出现「工作区文件」胶囊按钮,无需任何构建或配置。
