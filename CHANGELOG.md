@@ -7,6 +7,11 @@
 - **全屏模式** — 头部关闭键旁新增展开/还原按钮(Lucide `maximize` / `minimize` 现成图标),点一下弹窗覆盖整个会话区(看大文件/长 MD),再点恢复原尺寸;`Esc` 先退全屏再关闭;全屏时点外部不自动关、拖拽拉手隐藏 / **Fullscreen mode** — header toggle expands the popup over the whole session area and back; `Esc` exits fullscreen first.
 - **全屏只罩会话区** — 全屏范围收敛为会话消息区:左侧顺输入框冒泡找会话列(跟随侧边栏伸缩),上沿顶满视口(盖住 header 工具栏),下沿视口底固定预留 132(稳露输入框,多行输入只收不探);全部只认可见节点,DSH 升级改 DOM 也不怕 / **Scoped fullscreen** — covers the message column only: left follows the conversation column, top flush with viewport, bottom reserves 132px for the composer.
 
+### 修复 Fix
+
+- **提示文案对齐真实图标** — hint 里的 ⏎ 改为 ↙(与行首 Lucide `arrow-down-left` 一致),删掉提示行前多余的 ↩ 装饰 / **Hint matches the real icon** — ↙ instead of ⏎, stray ↩ removed.
+- **目录可插入引用** — 目录行也有行首 ↙ 按钮(插入 `@目录/`),`@` / `i` 快捷键不再限文件 / **Folders insertable** — directory rows get the ↙ button (`@dir/`), `@` / `i` works on folders too.
+
 ## [0.7.1-fork.3] - 2026-09-12
 
 ### 移除 Removal

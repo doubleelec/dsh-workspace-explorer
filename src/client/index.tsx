@@ -32,7 +32,7 @@ const NS = 'dsh-workspace-explorer'
 const DICTS: Record<string, Record<string, string>> = {
   zh: {
     'panel.title': '工作区文件', 'ws.current': '当前目录', 'search.ph': '搜索文件(仅已加载目录)…',
-    hint: '点击预览 / ⏎ 插入到对话;拖拽也可插入;Shift 或 ⌘ 点击多选批量插入', 'empty.title': '还没有可浏览的工作区。选择一个项目文件夹,即可在这里查看目录文件。',
+    hint: '点击预览 / ↙ 插入到对话;目录行也有 ↙(插入 @目录/);拖拽也可插入;Shift 或 ⌘ 点击多选批量插入', 'empty.title': '还没有可浏览的工作区。选择一个项目文件夹,即可在这里查看目录文件。',
     'empty.add': '+ 选择文件夹作为工作区', 'loading.ws': '正在加载工作区…', hit: '匹配 {n} 项',
     'hit.none': '没有匹配「{q}」的文件(搜索范围:已加载目录)', truncated: '已截断,仅显示前 {n} 项',
     loading: '加载中…', 'load.fail': '加载失败: ', read: '读取中…', 'read.fail': '读取失败: ',
@@ -67,7 +67,7 @@ const DICTS: Record<string, Record<string, string>> = {
   },
   en: {
     'panel.title': 'Workspace Files', 'ws.current': 'Current dir', 'search.ph': 'Search files (loaded dirs only)…',
-    hint: 'Click to preview / ⏎ to insert; drag also inserts; Shift or ⌘ click to select multiple', 'empty.title': 'No browsable workspace yet. Pick a project folder to view its files.',
+    hint: 'Click to preview / ↙ to insert; folders have ↙ too (@dir/); drag also inserts; Shift or ⌘ click to select multiple', 'empty.title': 'No browsable workspace yet. Pick a project folder to view its files.',
     'empty.add': '+ Choose a folder as workspace', 'loading.ws': 'Loading workspaces…', hit: '{n} match(es)',
     'hit.none': 'No files match "{q}" (search covers loaded dirs)', truncated: 'Truncated: showing the first {n}',
     loading: 'Loading…', 'load.fail': 'Load failed: ', read: 'Reading…', 'read.fail': 'Read failed: ',
@@ -884,11 +884,10 @@ function Panel(props: {
         onClick={(ev) => onRowClick(ev, entry)}
         onKeyDown={(ev) => {
           if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); if (isDir) toggle(entry.rel); else openPreview(entry) }
-          else if ((ev.key === '@' || ev.key === 'i') && !isDir) { ev.preventDefault(); insertMarker(entry) }
+          else if (ev.key === '@' || ev.key === 'i') { ev.preventDefault(); insertMarker(entry) }
         }}>
         <span className={C('dshwe-chev-slot')}>{isDir ? <ChevronSvg open={isExp} /> : null}</span>
-        {!isDir ? (
-          <button type="button" className={C('dshwe-share-btn') + (isPreviewActive ? ` ${C('dshwe-share-btn-on')}` : '')}
+        <button type="button" className={C('dshwe-share-btn') + (isPreviewActive ? ` ${C('dshwe-share-btn-on')}` : '')}
             title={tr('share.tip')} aria-label={tr('share.tip')}
             onMouseDown={(e) => { e.preventDefault(); e.stopPropagation() }}
             onClick={(e) => { e.stopPropagation(); insertMarker(entry) }}>
@@ -897,7 +896,6 @@ function Panel(props: {
               <path d="M17 17H7V7" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
-        ) : null}
         {iconFor(entry, isExp)}
         <span className={C('dshwe-name')}>{entry.name}</span>
         {!isDir && c.showSize && entry.size != null ? <span className={C('dshwe-size')}>{fmtSize(entry.size)}</span> : null}
@@ -1049,7 +1047,7 @@ function Panel(props: {
           </button>
         ) : null}
       </div>
-      <div className={C('dshwe-hintline')}><span>↩</span>{tr('hint')}</div>
+      <div className={C('dshwe-hintline')}>{tr('hint')}</div>
       <div className={C('dshwe-tree')}>{body}</div>
       {selected.size > 0 ? (
         <div className={C('dshwe-selbar')}>
