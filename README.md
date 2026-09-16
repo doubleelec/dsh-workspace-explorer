@@ -1,10 +1,8 @@
 # dsh-workspace-explorer
 
-> Self-maintained fork by [doubleelec](https://github.com/doubleelec) — based on
+> Self-maintained by [doubleelec](https://github.com/doubleelec) — based on
 > [Jiyr0119/dsh-workspace-explorer](https://github.com/Jiyr0119/dsh-workspace-explorer) v0.7.1 (MIT).
 > npm package: `@doubleelec/dsh-workspace-explorer`.
-
-**[English](README.md)** | [中文](README.zh.md)
 
 [![License](https://img.shields.io/github/license/doubleelec/dsh-workspace-explorer)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/doubleelec/dsh-workspace-explorer)](https://github.com/doubleelec/dsh-workspace-explorer/stargazers)
@@ -20,8 +18,8 @@ Inspired by the VS Code / Cursor project tree, filling the gap of a missing dire
 
 ## Why this plugin
 
-- **Preview first, never misfire** — clicking a file row opens it in a dedicated Preview tab instead of unexpectedly injecting text into your draft. Sharing is an explicit act: the arrow button at the row's head, `⏎`, points toward the composer at the bottom-left — the icon says where the file is going.
-- **Markdown that reads like Markdown** — `.md` / `.mdx` files render formatted (headings, lists, code blocks, quotes, tables, task lists) with a one-click source toggle. Zero-dependency renderer built on React elements — XSS-safe by construction, no sanitizer needed.
+- **Preview first, never misfire** — clicking a file row opens it in a dedicated Preview tab instead of unexpectedly injecting text into your draft. Sharing is an explicit act: the arrow button at the row's head, `⏎`, points toward the composer at the bottom-left — the icon says where the file is going. Closing and reopening the panel restores the tab, the previewed file and the Markdown view.
+- **Markdown that reads like Markdown** — `.md` / `.mdx` files render formatted (headings, lists, code blocks, quotes, tables, task lists) with a one-click source toggle. `mermaid` blocks render on demand via CDN lazy-load. Zero-dependency renderer built on React elements — XSS-safe by construction, no sanitizer needed.
 - **Reference anything in one motion** — single click to share, drag & drop to the caret, Shift / ⌘ multi-select batch insert, or type `@` in the composer to fuzzy-find any file (up to 5000 entries, 10 levels deep) even with the panel closed.
 - **Edit without leaving** — preview panel turns into an editor (Save / Discard / Cancel) with external-change detection on save; writes go straight to disk.
 - **Fullscreen when it matters** — one click in the header expands the popup over the whole session area for big files and long Markdown; click again (or `Esc`) to go back.
@@ -31,10 +29,10 @@ Inspired by the VS Code / Cursor project tree, filling the gap of a missing dire
 
 ![dsh-workspace-explorer demo](demo/preview.gif)
 
-*Demo GIF (recorded at v0.5.1): the **“Workspace Files” pill entry**, multi-select batch insert, folder drag → compact tree text, paginated preview, and the settings tab. The newer Preview tab, file editing and Markdown rendering are shown in the screenshots below.*
+*Demo GIF (recorded at v0.5.1): the **“Workspace Files” pill entry**, multi-select batch insert, folder drag → compact tree text, paged preview, and the settings tab. The newer Preview tab, file editing and Markdown rendering are shown in the screenshots below.*
 
 <details>
-<summary><b>Screenshots</b> · 截图</summary>
+<summary><b>Screenshots</b></summary>
 
 ![Panel](assets/screenshots/panel.png)
 
@@ -54,7 +52,7 @@ Inspired by the VS Code / Cursor project tree, filling the gap of a missing dire
 - 🗂 **Top tab bar** — Files / Preview / Settings; the Settings page tunes behavior live (hide noise dirs, show sizes, reference format) and mirrors into DSH Settings → Workspace Explorer
 - 🗂 **Lazy-loading tree** — directories load on demand; noise dirs (`node_modules`, `.git`, `dist`, `__pycache__`, …) are hidden automatically
 - 🎨 **File-type icons** — filled, color-coded document badges per extension (TS / JS / Python / JSON / Markdown / image / config / shell, …); amber folders that brighten when expanded; the actively previewed file gets a blue dot
-- 🖱 **Click to preview** — click a file row (or `Enter` / `Space`) to open it in the Preview tab; the **⏎ button** at the row's head inserts the `@path` reference into the composer (`@` / `i` shortcut works too)
+- 🖱 **Click to preview** — click a file row (or `Enter` / `Space`) to open it in the Preview tab; the **⏎ button** at the row's head inserts the `@path` reference into the composer (`@` / `i` shortcut works too). The tab, the file and the rendered/source view survive panel close/reopen.
 - ⛶ **Fullscreen mode** — the header toggle (next to close) expands the popup over the whole session area for big files / long Markdown; click again to restore, `Esc` exits fullscreen first
 - 🖱 **Drag & drop** — drop a file into the composer to insert at the caret (fullscreen dashed hint); dropping elsewhere appends to the end. **Folders are draggable too** — dropping a directory inserts a depth-limited compact tree listing
 - 🖱 **Multi-select & batch insert** — Shift / ⌘ click to select multiple rows, then insert all of them at once (files → references, folders → tree listings)
@@ -62,13 +60,14 @@ Inspired by the VS Code / Cursor project tree, filling the gap of a missing dire
 - 🌓 **Theme-aware** — built entirely on DSH's `--dsw-alias-*` design tokens; adapts to light/dark with a native dialog look (16px radius, lv3 shadow)
 - 🔍 **Search & filter** — filter files by name across the whole tree (up to 5000 entries / 10 levels, match count shown)
 - 📝 **Markdown rendering** — `.md` / `.mdx` preview rendered by default (headings, bold/italic/strike, code blocks with language tag, quotes, ordered/unordered/task lists, tables, horizontal rules); one-click toggle back to source; oversized paged files fall back to source automatically
+- 📊 **Mermaid diagrams** — `mermaid` code blocks show a Render button; the library (mermaid@10, jsDelivr primary + unpkg fallback) loads on first click only, so the bundle stays +6 KB; `securityLevel: strict`, source fallback on offline/CSP/syntax errors
 - ✏️ **Preview tab** — whole-file view (≤ 512 KB in one read, paged beyond that with total lines & current page); insert the reference, or paste the full content for small files (≤ 32 KB)
 - 📝 **File editing** — click "Edit" in the preview panel to enter textarea mode; save writes directly to disk with change detection (warns if the file was modified externally)
 - 🌐 **i18n** — zh/en dictionaries registered through DSH's locale service; the panel follows the DSH UI language
 
 ## Quick Start
 
-### Installation & usage
+### Install from npm
 
 One command installs the full plugin — no build step, no config changes. The npm package ships a native host half (`lib/index.js`, webServer JSON routes `/dsh-we/api/list|peek|tree|config|write`) **and** a browser bundle (`lib/client.js` via `dsh.plugin.json`).
 
@@ -80,11 +79,20 @@ dsh plugin --profile web add -w @doubleelec/dsh-workspace-explorer@latest
 
 > ℹ️ **pnpm note**: modern pnpm (9/10) refuses to add a dependency at the workspace root (`ERR_PNPM_ADDING_TO_ROOT`), hence the `-w` flag above. Alternative: create `~/.dsh/profiles/web/.npmrc` containing `ignore-workspace-root-check=true`.
 
-> 🛠 **Maintainer shortcut — local install without publishing**: after testing in dev (3090), build and install straight from the repo into prod (3080) as a decoupled copy — `npm run build`, then `dsh plugin --profile web add -w "file://D:/path/to/dsh-workspace-explorer"`, then refresh 3080. No npm publish needed. Full steps in [`docs/install.md`](./docs/install.md#方式二本地目录安装无需发布维护者路径).
-
 > ⚠️ **Common misconception**: a listing alone never auto-installs anything — users still click install. The full UI now appears after install (native bundle — no boot errors).
 
-See [`docs/install.md`](./docs/install.md) for details.
+### Install from local source (no publish)
+
+After testing in dev (3090), install straight from this repo into prod (3080) as a decoupled copy — no npm publish needed:
+
+```powershell
+# one elevation, everything inside: symlink + build + web install
+powershell -ExecutionPolicy Bypass -File scripts/setup.ps1
+
+# refresh 3080 — done (restart `dsh web` only if the panel is missing)
+```
+
+What the script does: rebuilds `lib/` (what DSH actually loads), links the dev profile to this repo (instant refresh on 3090), and installs a **real copy** (not a symlink) into the web profile so dev churn never leaks into prod. Later edits: rebuild + refresh 3090; when tested, re-run the script (or `dsh plugin --profile web install`) + refresh 3080.
 
 ### Usage
 
@@ -93,7 +101,7 @@ See [`docs/install.md`](./docs/install.md) for details.
 3. Click the **⏎ button** at a row's head (or drag the file into the composer, or type `@` + filename) to reference it, then send.
 4. Use the **Settings** tab at the top of the popup (or DSH Settings → Workspace Explorer) to adjust panel behavior.
 
-### Local development
+## Local development
 
 Two isolated environments — edit once, verify in dev, then ship to prod:
 
@@ -104,47 +112,77 @@ Two isolated environments — edit once, verify in dev, then ship to prod:
 | Plugin source | symlink → this repo | real copy (decoupled from source) |
 
 ```powershell
+# first time only: one elevated shell sets up both profiles
+powershell -ExecutionPolicy Bypass -File scripts/setup.ps1
+
+# daily loop
 # 1) edit src/, then build (lib/ is what DSH actually loads)
 npm run build
-
 # 2) refresh 3090 — changes appear instantly (symlink, no reinstall, no restart)
-
 # 3) after testing, sync to prod (no npm publish needed)
 dsh plugin --profile web install
-
 # 4) refresh 3080 — done, no restart needed
 ```
 
-**Rule of thumb:** 3090 follows the source automatically; 3080 only eats what you manually `install` into it — half-baked edits never leak into prod. Details in [`docs/local-debugging.md`](./docs/local-debugging.md).
+**Rule of thumb:** 3090 follows the source automatically; 3080 only eats what you manually `install` into it — half-baked edits never leak into prod.
+
+Dev profile layout (`$env:USERPROFILE\.dsh\profiles\dev\`): `package.json` with a `file:` dep on this repo → `node_modules/@doubleelec/dsh-workspace-explorer` symlink. If the link breaks after moving the repo, just re-run `scripts/setup.ps1`. Never run `dsh web --port 3090` for dev — `dsh web` is pinned to the web profile; dev must use `dsh --profile dev --port 3090`.
+
+Troubleshooting: no panel after refresh → check the symlink target; edits not showing → you forgot `npm run build`; port 3090 busy → `netstat -ano | Select-String ':3090 '` then `taskkill /PID <PID> /F`.
+
+## Publishing
+
+Daily installs use a local mirror, but **publishing must go to the official registry** (mirrors are read-only). Never write the official registry into `.npmrc`.
+
+```powershell
+cd <repo>   # this repo's checkout
+
+# 1) login (official registry; 2FA needs an OTP)
+npm login --registry=https://registry.npmjs.org/
+
+# 2) sync versions (package.json / dsh.plugin.json / manifest.json),
+#    finalize CHANGELOG, verify
+npm run build
+npm run typecheck
+
+# 3) publish — stable releases go straight to `latest`, no --tag
+npm publish --registry=https://registry.npmjs.org/
+
+# 4) verify + tag the source
+npm view @doubleelec/dsh-workspace-explorer version --registry=https://registry.npmjs.org/
+git tag v0.9.0
+git push elec v0.9.0
+```
+
+Notes: version numbers stay in sync across `package.json` / `dsh.plugin.json` / `manifest.json` (+ CHANGELOG). Package contents: `lib/` + `dsh.plugin.json` + `manifest.json` + docs (see `files` in `package.json`). A bad publish can be undone within 72h: `npm unpublish @doubleelec/dsh-workspace-explorer@<version> --registry=https://registry.npmjs.org/`.
 
 ## Project Structure
 
 ```
 dsh-workspace-explorer/
-├── README.md             # Docs — English (default)
-├── README.zh.md          # Docs — 中文
+├── README.md             # Docs — English, single file (this one)
 ├── LICENSE               # MIT
 ├── CHANGELOG.md          # Release notes
 ├── manifest.json         # Plugin metadata
 ├── package.json          # npm package (@doubleelec/dsh-workspace-explorer)
+├── scripts/
+│   └── setup.ps1         # One-elevation setup: dev symlink + build + web install
 ├── demo/
 │   ├── index.html        # Interactive mock preview (GitHub Pages)
 │   └── preview.gif       # Demo animation (README)
 ├── .github/
 │   └── workflows/
 │       └── pages.yml     # Deploy demo/ to GitHub Pages (manual; preview hidden)
-├── docs/
-│   ├── install.md        # Install guide
-│   ├── local-debugging.md# Local dev setup (symlink + dev profile)
-│   └── publish.md        # Publishing workflow (GitHub + npm)
 ├── src/
 │   ├── index.ts          # Native host half: webServer JSON routes (/dsh-we/api/*)
 │   └── client/
 │       ├── index.tsx     # Native client half: popup + tree + preview + drag & drop
 │       ├── markdown.ts   # Zero-dep Markdown parser/renderer (XSS-safe)
+│       ├── mermaid.ts    # Mermaid CDN lazy-loader
+│       ├── previewState.ts # Preview restore state (tab + file + MD view)
 │       ├── format.ts     # Pure formatting helpers
 │       └── popupLayout.ts# Popup geometry math (unit-tested)
-├── test/                 # vitest suites (format / host / popupLayout / markdown)
+├── test/                 # vitest suites (format / host / popupLayout / markdown / mermaid / previewState)
 └── lib/                  # Built artifacts (lib/index.js + lib/client.js)
 ```
 
@@ -163,11 +201,22 @@ dsh-workspace-explorer/
 | `@` mention | `inputTriggers.registerSource` (fuzzy candidates + lexicon highlight), root auto-discovered from sessions cwd |
 | Drag & drop | HTML5 DnD; native caret insert in the textarea, append elsewhere |
 | Markdown | Hand-written parser → React elements (no `innerHTML`); source toggle; paged fallback |
+| Mermaid | CDN lazy-load (jsDelivr + unpkg fallback), `securityLevel: strict`, click-to-render per block |
+| Preview restore | Module-level memory (tab + file ref + MD view), same-root only; mermaid stays unrendered |
 | Theming / i18n | `--dsw-alias-*` CSS variables (light/dark); zh/en via the DSH locale service |
+
+### Hard-won lessons (native packaging)
+
+- **Quoted scoped names in YAML** — `cordis.patch.yml` must quote `'@doubleelec/dsh-workspace-explorer'`; a bare `@` crashes `dsh web` boot (`bad indentation of a mapping entry`).
+- **One route per `register()` call** — passing an array silently registers nothing (routes end up under key `undefined`); call `webServer.register` once per route.
+- **Supersede stale entries** — when an entry point moves (e.g. sidebar button → header pill), register an empty placeholder on the old slot so the legacy button disappears.
+- **Bundle id = npm name** — the client bundle `id` must equal the package name including scope, or the panel never mounts (platform keys modules by name).
+- **Toolchain: tsdown ^0.22 + lightningcss** — tsdown 0.6.x is incompatible with rolldown (`transformPlugin` FATAL). Platform modules (`react`, `react-dom`, `@deepseek-ai/cordis`, `dsh-client-*`) stay external; CSS Modules inline via lightningcss.
+- **rc version families matter** — `dsh-client-*` / `dsh-host-webserver` / `dsh-invariants` must be a mutually compatible rc family; mixing rc.1 with rc.6 breaks installs (`dsh-paths` E404).
 
 ## Version
 
-Current version **v0.8.0** — **Preview-first interaction** (row click previews, ↙ shares), **Markdown rendering**, **scoped fullscreen**, and **single-package cleanup** (dynamic paste variant removed).
+Current version **v0.9.0** — **Mermaid diagrams** (CDN lazy-load, click-to-render), **preview restore** (tab + file + Markdown view), and the XSS-test fix.
 See [CHANGELOG.md](./CHANGELOG.md) for release notes.
 
 ## Roadmap
@@ -176,7 +225,7 @@ Focused on the two lines that actually matter to the product: the **read path** 
 
 **Done ✅**
 
-- [x] v0.1 core: right-side file tree, click / drag-to-composer references, native DSH look
+- [x] v0.1 core: right-side file tree, click / drag-to-composer references, DSH native look
 - [x] Search & filter across the whole tree; content insertion for small files (≤ 32 KB)
 - [x] i18n (zh/en via the DSH locale service, follows the DSH UI language)
 - [x] `@` mention source with sessions-cwd auto-discovery + lexicon highlight; unified `@path` reference format
@@ -184,10 +233,12 @@ Focused on the two lines that actually matter to the product: the **read path** 
 - [x] npm package + `dsh.bundle` contract + awesome-dsh-plugin listing
 - [x] Multi-target references: folder drag (compact tree) + multi-select batch insert
 - [x] Whole-file preview (≤ 512 KB) with paged fallback for large files
-- [x] Preview-first interaction: row click previews, ⏎ button shares, keyboard `@` / `i`
-- [x] Markdown rendering (zero-dep, XSS-safe) with source toggle
+- [x] Preview-first interaction: row click previews, ⏎ shares, `@` / `i` shortcuts
+- [x] Markdown rendering (zero-dep, XSS-safe) + source toggle
 - [x] In-panel file editing with external-change detection
 - [x] Resizable popup with size memory; Preview as a standalone tab
+- [x] Mermaid diagrams (CDN lazy-load, click-to-render)
+- [x] Preview restore (tab + file + Markdown view)
 
 **Parked backlog** (do when real demand shows up)
 

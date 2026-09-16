@@ -38,11 +38,10 @@
     "lib",
     "dsh.plugin.json",
     "cordis.patch.yml",
-    "docs",
+    "scripts",
     "demo",
     "assets",
     "README.md",
-    "README.zh.md",
     "LICENSE",
     "manifest.json"
   ],
