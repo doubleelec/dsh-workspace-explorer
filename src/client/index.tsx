@@ -506,12 +506,15 @@ async function fetchAllFiles(root: string): Promise<FlatFile[]> {
 function invalidateFileCache(): void { fileCacheRoot = null; fileCache = [] }
 
 // ---------- 会话头部工具区按钮(与 session log 同排:功能名称 + 图标胶囊) ----------
+// 开着再点 = 关闭(标准 toggle)。注意 CSS Module 类名经哈希,document 级 closest
+// 必须用 data 属性定位 —— 因此按钮带 data-dshwe-toggle,关闭后 300ms 内
+// 点外部自动关闭监听忽略该按钮(否则 pointerdown 先关、click 再开,看起来像"刷新")。
 function HeaderAction() {
   const [on, setOn] = useState(getOpen())
   useEffect(() => subscribeOpen(setOn), [])
   return (
-    <button type="button" className={C('dshwe-hicon') + (on ? ` ${C('dshwe-hicon-on')}` : '')}
-      onClick={toggleDrawer} title={tr('drawer.tip')} aria-label={tr('drawer.open')}>
+    <button type="button" data-dshwe-toggle="" className={C('dshwe-hicon') + (on ? ` ${C('dshwe-hicon-on')}` : '')}
+      onClick={toggleDrawer} title={tr('drawer.tip')} aria-label={tr('drawer.open')} aria-expanded={on}>
       <span>{tr('drawer.label')}</span>
       <svg viewBox="0 0 16 16" width={13} height={13} aria-hidden="true">
         <path d={FOLDER_D} fill="currentColor" />
@@ -1241,17 +1244,28 @@ function DrawerRoot(props: {
     return () => document.removeEventListener('keydown', onKey)
   }, [])
   // 点击外部自动关闭:点中面板自身 / 输入框(composer) / 头部胶囊按钮都不关,
-  // 点聊天区等其它位置才关(避免打字定位光标、拖拽插入时误关);全屏时不自动关
+  // 点聊天区等其它位置才关(避免打字定位光标、拖拽插入时误关);全屏时不自动关。
+  // 胶囊按钮用 data-dshwe-toggle 定位(CSS Module 类名经哈希,document 级 closest 认不出);
+  // 关后 300ms 内忽略该按钮的 pointerdown —— 否则"点按钮关闭"这一下:
+  // pointerdown 先关、随后的 click(toggle) 再开,看起来就像"刷新"。
+  const closeAtRef = useRef(0)
+  useEffect(() => { if (!on) closeAtRef.current = Date.now() }, [on])
   useEffect(() => {
     if (!on || fullscreen) return
     const onDown = (e: PointerEvent): void => {
       const t = e.target instanceof HTMLElement ? e.target : null
       if (!t) return
-      if (t.closest('[data-dshwe-popup], [data-composer-card], .dshwe-hicon')) return
+      if (t.closest('[data-dshwe-popup], [data-composer-card], [data-dshwe-toggle]')) return
       closeDrawer()
     }
-    document.addEventListener('pointerdown', onDown, true)
-    return () => document.removeEventListener('pointerdown', onDown, true)
+    const onDownGuarded = (e: PointerEvent): void => {
+      // 刚关闭(300ms 内)且点的是胶囊按钮:跳过,让 click 的 toggle 生效(保持关闭)
+      const t = e.target instanceof HTMLElement ? e.target : null
+      if (t?.closest('[data-dshwe-toggle]') && Date.now() - closeAtRef.current < 300) return
+      onDown(e)
+    }
+    document.addEventListener('pointerdown', onDownGuarded, true)
+    return () => document.removeEventListener('pointerdown', onDownGuarded, true)
   }, [on, fullscreen])
   // 动态测量弹窗区域:header 底部 → composer 顶部;窗口尺寸/布局变化时实时更新
   // 加固点(针对忽高忽矮):①弹窗打开时强制重测一次;②composer 高度变化(多行输入)
