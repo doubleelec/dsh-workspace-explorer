@@ -81,5 +81,9 @@ try {
 
 Write-Host @'
 
-Done. Refresh http://127.0.0.1:3080 — restart `dsh web` only if the panel is missing.
+Done. Verify:
+  client-only change (src/client/*): refresh http://127.0.0.1:3080
+  host change (src/index.ts, e.g. noise filter): RESTART `dsh web`
+    (the old host stays in memory across page refreshes — refresh alone
+    will keep showing stale behavior like a still-visible .github)
 '@ -ForegroundColor Green
