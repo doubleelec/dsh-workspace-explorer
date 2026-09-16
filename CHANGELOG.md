@@ -8,10 +8,20 @@
 
 - **Mermaid 图表渲染** — `.md` 预览里 ` ```mermaid ` 块显示「渲染图表」按钮,点击才从 CDN 懒加载(mermaid@10,jsdelivr 主 + unpkg 备)画图,可切回源码;`securityLevel: strict`,无网/CSP 拦截/语法报错时回落源码 + 重试;包体积仅 +6KB(mermaid 不打进 bundle,按需拉取),深浅色跟随系统 / **Mermaid diagrams** — `mermaid` code blocks render on demand via CDN lazy-load with source fallback; only +6KB to the bundle.
 - **预览状态恢复** — 关闭重开文件浏览器回到上次状态:Tab(文件/预览/设置)+ 预览文件(只读重读最新内容)+ MD 渲染/源码视图;点 ✕ 关预览清记忆,换工作区不跨 root 恢复;mermaid 渲染态不记(重开回未渲染,不自动拉 CDN) / **Preview restore** — reopening the panel restores the tab, the previewed file and the MD view; mermaid stays unrendered until clicked.
+- **设置页版本号** — 设置底部显示 `版本 v{package.json}`,构建时打进 bundle,装没装对一眼可辨 / **Version in Settings** — bundled version shown at the bottom of Settings for install verification.
+- **展示层噪声过滤** — 「隐藏噪声目录」开关搬到前端展示层:名单目录必藏,开时加点开头目录,点开头文件(`.env`/`.gitignore`)保留;面板树/面板内搜索跟随开关,`@` 菜单走全量不受影响;host 零改动,刷新即生效 / **Display-layer noise filter** — dot-dirs hidden in the tree only; `@` index stays unfiltered; no host change.
+- **删目录选择行** — 「当前目录」下拉框整行删除(含 `+` 按钮,搬进头部标题栏):root 跟随会话 cwd,搜索框顶上,目录树多出一行 / **Root selector removed** — root follows the session cwd; `+` moved to the header.
+- **Star 文案** — 「授人 Star,手留余香」/ "Give Stars, keep the fragrance".
 
 ### 修复 Fix
 
+- **头部胶囊开着再点真正关闭** — 修点外部自动关闭与 toggle 的竞态(关了又秒开,看起来像刷新):胶囊按钮改 `data-dshwe-toggle` 定位(CSS Module 哈希认不出),关后 300ms 内忽略按钮 pointerdown / **Header pill truly toggles** — fixed close-then-instant-reopen race.
 - **Markdown XSS 单测断言纠正** — `never emits raw html nodes` 误断言序列化文本不含 `<script>` 字符;改为断言无 `html` 类型节点(原始标记只进 text 节点,由 React 渲染时转义),10 例全过 / **Fixed a wrong XSS test assertion** — assert no `html` node type instead of absence of the literal string.
+
+### 维护 Maintenance
+
+- **安装脚本加固** — `scripts/setup.ps1` 先删 web 旧副本再装(破 `file:` 复用缓存导致的静默旧版),装完校验 bundle 标记;任一步失败自动回滚 `.bak`;结尾区分 client 刷新与 host 重启 / **Setup script hardened** — delete-then-install with bundle verification and rollback.
+- **文档合一** — `docs/` 5 篇 + 中文 README 并入英文 `README.md`(用户),开发者内容拆到 `DEV.md`;安装脚本只管 3080 / **Docs merged** — single English README for users, DEV.md for maintainers.
 
 ## [0.8.0] - 2026-09-15
 
