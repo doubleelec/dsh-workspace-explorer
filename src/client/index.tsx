@@ -14,6 +14,7 @@ import { isMarkdownFile, parseMarkdown } from './markdown'
 import type { MdInline, MdNode } from './markdown'
 import { isMermaidLang, loadMermaid } from './mermaid'
 import { autoPopupHeight, clampPopupHeight, clampPopupWidth, loadManualHeight, loadManualWidth, saveManualHeight, saveManualWidth } from './popupLayout'
+import pkg from '../../package.json'
 import { clearSavedPreview, getSavedMdView, getSavedPreview, getSavedTab, saveMdView, savePreviewRef, savePreviewTab, shouldRestorePreview } from './previewState'
 
 const MARKER = 'application/x-dsh-ws-file'
@@ -65,7 +66,7 @@ const DICTS: Record<string, Record<string, string>> = {
     'settings.showSize': '显示文件大小',
     'settings.refStyle': '文件引用格式', 'settings.refStyle.rel': '相对路径', 'settings.refStyle.abs': '绝对路径',
     'settings.restore': '恢复默认', 'settings.note': '配置在本次会话内生效,重启插件后恢复默认。',
-    'settings.nav': '工作区文件',
+    'settings.nav': '工作区文件', 'settings.version': '版本 v{ver}',
     'star.ask': '⭐ 顺手留颗 Star，维护者能高兴一整天',
     'star.cta': '★ 给一颗 Star',
     'drawer.tip': '文件目录', 'drawer.open': '打开文件抽屉', 'drawer.label': '工作区文件',
@@ -103,7 +104,7 @@ const DICTS: Record<string, Record<string, string>> = {
     'settings.showSize': 'Show file sizes',
     'settings.refStyle': 'File reference format', 'settings.refStyle.rel': 'Relative path', 'settings.refStyle.abs': 'Absolute path',
     'settings.restore': 'Reset to defaults', 'settings.note': 'Settings apply for this run; they reset when the plugin restarts.',
-    'settings.nav': 'Workspace Explorer',
+    'settings.nav': 'Workspace Explorer', 'settings.version': 'Version v{ver}',
     'star.ask': '⭐ Drop a Star if it helped — it makes the maintainer\'s day',
     'star.cta': '★ Give a Star',
     'drawer.tip': 'Files', 'drawer.open': 'Open files drawer', 'drawer.label': 'Workspace Files',
@@ -575,8 +576,11 @@ function SettingsView() {
     { value: 'relative', label: tr('settings.refStyle.rel') },
     { value: 'absolute', label: tr('settings.refStyle.abs') },
   ]
+  // 版本号取自 package.json(构建时打进 bundle,DSH 加载的代码版本即显示的版本)
+  const version = (pkg as { version?: string }).version ?? '?'
   return (
     <div className={C('dshwe-set')}>
+      <div className={C('dshwe-setsec')}>{tr('settings.version', { ver: version })}</div>
       <div className={C('dshwe-star-section')}>
         <div className={C('dshwe-star-row')}>
           <div className={C('dshwe-star-info')}>
