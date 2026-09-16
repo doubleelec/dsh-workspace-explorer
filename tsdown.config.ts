@@ -95,7 +95,9 @@ const client: UserConfig = {
           minify: true,
         })
         const classMap: Record<string, string> = {}
-        for (const [local, exp] of Object.entries(cssExports ?? {})) classMap[local] = exp.name
+        // 排序后拼表:lightningcss exports 的键顺序不稳定,同内容多次构建会抖动;
+        // 固定顺序后无 src 改动时 bundle 零差异,有改动时 diff 只剩真改动
+        for (const local of Object.keys(cssExports ?? {}).sort()) classMap[local] = cssExports![local].name
         const tagId = `${ID}/${basename(fileId)}`
         return [
           `const css = ${JSON.stringify(code.toString())};`,
