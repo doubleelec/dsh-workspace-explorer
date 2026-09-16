@@ -37,6 +37,16 @@ else {
 }
 
 Write-Host "`n== web profile (3080): local file: install (decoupled copy) ==" -ForegroundColor Cyan
+# `dsh plugin add` reuses the existing file: copy when the dep already exists
+# (output shows `reused 1, added 0`), silently keeping the STALE bundle —
+# that was the 2026-09-16 miss: 3090 toggled, 3080 didn't. So delete the
+# installed copy first, then add + install (forces `added 1`), then verify
+# the new bundle marker is present before declaring success.
+$webCopy = Join-Path $env:USERPROFILE '.dsh\profiles\web\node_modules\@doubleelec\dsh-workspace-explorer'
+if (Test-Path $webCopy) {
+  Write-Host "removing stale copy: $webCopy"
+  Remove-Item -Recurse -Force $webCopy
+}
 Push-Location $Repo
 try {
   # forward slashes: file: deps must not use backslashes
@@ -44,6 +54,13 @@ try {
   dsh plugin --profile web add -w $uri
   dsh plugin --profile web install
 } finally { Pop-Location }
+$webBundle = Join-Path $webCopy 'lib\client.js'
+if (-not (Test-Path $webBundle)) { throw "install failed: $webBundle missing after install." }
+$probe = Select-String -Path $webBundle -Pattern 'dshwe-toggle' -SimpleMatch | Select-Object -First 1
+if (-not $probe) {
+  throw 'install verification failed: new bundle marker (dshwe-toggle) not found in web copy — 3080 would keep running stale code.'
+}
+Write-Host "verified: new bundle present in web copy ($($probe.LineNumber))." -ForegroundColor Green
 
 Write-Host @'
 
