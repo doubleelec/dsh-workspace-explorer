@@ -53,6 +53,7 @@ const DEFAULT_IGNORED = ['.git', 'node_modules', '__pycache__', '.venv', 'venv',
 /** @internal 运行期配置(供单元测试调整),不构成公开 API。 */
 export const cfg = {
   ignore: [...DEFAULT_IGNORED],
+  hideDotDirs: true,
   max: 400,
   peekMaxLines: 60,
 }
@@ -109,8 +110,9 @@ export async function listDir(abs: string, baseRel: string, ignoreNoise = true):
   const out: WsEntry[] = []
   for (const d of dirents) {
     if (d.name === '.DS_Store') continue
-    // 噪声过滤只针对目录:命中名单的目录跳过,外加所有 `.` 开头目录(.git/.idea/.venv 等)
-    if (ignoreNoise && d.isDirectory() && (cfg.ignore.includes(d.name) || d.name.startsWith('.'))) continue
+    // 噪声过滤只针对目录:命中名单的目录跳过;hideDotDirs 开时外加所有 `.` 开头目录
+    // (.git/.idea/.venv 等)。点开头文件(.env/.gitignore)永远保留。
+    if (ignoreNoise && d.isDirectory() && (cfg.ignore.includes(d.name) || (cfg.hideDotDirs && d.name.startsWith('.')))) continue
     const target = join(abs, d.name)
     let size: number | null = null
     if (d.isFile()) {
@@ -241,9 +243,10 @@ export default {
         handler: async (req, res) => {
           const body = await readJsonBody(req)
           if (Array.isArray(body.ignore)) cfg.ignore = body.ignore.map((s) => String(s)).filter((s) => s !== '')
+          if (typeof body.hideDotDirs === 'boolean') cfg.hideDotDirs = body.hideDotDirs
           if (typeof body.max === 'number' && body.max >= 1 && body.max <= 2000) cfg.max = Math.floor(body.max)
           if (typeof body.peekMaxLines === 'number' && body.peekMaxLines >= 10 && body.peekMaxLines <= 500) cfg.peekMaxLines = Math.floor(body.peekMaxLines)
-          return writeJson(res, { ok: true, ignore: cfg.ignore, max: cfg.max, peekMaxLines: cfg.peekMaxLines })
+          return writeJson(res, { ok: true, ignore: cfg.ignore, hideDotDirs: cfg.hideDotDirs, max: cfg.max, peekMaxLines: cfg.peekMaxLines })
         },
       },
       {

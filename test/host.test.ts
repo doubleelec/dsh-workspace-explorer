@@ -8,10 +8,12 @@ let dir: string
 
 const originalMax = cfg.max
 const originalIgnore = cfg.ignore.slice()
+const originalHideDotDirs = cfg.hideDotDirs
 
 beforeEach(async () => {
   cfg.max = originalMax
   cfg.ignore = originalIgnore.slice()
+  cfg.hideDotDirs = originalHideDotDirs
   lineIndexCache.clear()
   dir = await mkdtemp(join(tmpdir(), 'dshwe-test-'))
 })
@@ -19,6 +21,7 @@ beforeEach(async () => {
 afterEach(async () => {
   cfg.max = originalMax
   cfg.ignore = originalIgnore.slice()
+  cfg.hideDotDirs = originalHideDotDirs
   lineIndexCache.clear()
   await rm(dir, { recursive: true, force: true })
 })
@@ -77,16 +80,34 @@ describe('listDir', () => {
 
   it('hides all dot-directories but keeps dot-files', async () => {
     await fixture()
-    await mkdir(join(dir, '.idea'))
+    await mkdir(join(dir, '.github'))
     await mkdir(join(dir, '.vscode'))
     await writeFile(join(dir, '.env'), 'x')
     await writeFile(join(dir, '.gitignore'), 'x')
     const { entries } = await listDir(dir, '')
     const names = entries.map((e) => e.name)
-    expect(names).not.toContain('.idea')
+    expect(names).not.toContain('.github')
     expect(names).not.toContain('.vscode')
     expect(names).toContain('.env')
     expect(names).toContain('.gitignore')
+  })
+
+  it('shows dot-directories when hideDotDirs is off', async () => {
+    await fixture()
+    await mkdir(join(dir, '.github'))
+    await mkdir(join(dir, '.vscode'))
+    cfg.hideDotDirs = false
+    try {
+      const { entries } = await listDir(dir, '')
+      const names = entries.map((e) => e.name)
+      // 不在名单里的点目录恢复显示
+      expect(names).toContain('.github')
+      expect(names).toContain('.vscode')
+      // 名单目录仍隐藏(开关只管点规则,不管名单)
+      expect(names).not.toContain('node_modules')
+    } finally {
+      cfg.hideDotDirs = true
+    }
   })
 
   it('fills sizes for files and null for directories', async () => {

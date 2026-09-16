@@ -165,7 +165,7 @@ interface PeekResult {
   lineCount?: number | null; startLine?: number; content?: string; hasMore?: boolean
 }
 interface TreeResult { ok: boolean; error?: string; name?: string; entries?: WsEntry[]; entryCount?: number; truncated?: boolean }
-interface ConfigResult { ok: boolean; ignore?: string[]; max?: number; peekMaxLines?: number }
+interface ConfigResult { ok: boolean; ignore?: string[]; hideDotDirs?: boolean; max?: number; peekMaxLines?: number }
 
 // ---------- 运行期配置(内存级;面板设置 Tab 与 DSH 设置页共享) ----------
 const NOISE = ['.git', 'node_modules', '__pycache__', '.venv', 'venv', '.pytest_cache', '.ruff_cache', '.mypy_cache', 'dist', 'build', '.next', '.nuxt', 'coverage', '.idea', 'target']
@@ -182,7 +182,7 @@ const cfgListeners = new Set<(c: WsCfg) => void>()
 const getCfg = (): WsCfg => cfg
 const notifyCfg = (): void => { cfgListeners.forEach((fn) => fn(cfg)) }
 const syncHostCfg = (): void => {
-  void api<ConfigResult>('config', { ignore: cfg.hideNoise ? NOISE.slice() : [] }).catch(() => {})
+  void api<ConfigResult>('config', { ignore: cfg.hideNoise ? NOISE.slice() : [], hideDotDirs: cfg.hideNoise }).catch(() => {})
 }
 const setCfg = (patch: Partial<WsCfg>): void => { cfg = { ...cfg, ...patch }; notifyCfg(); syncHostCfg() }
 const resetCfg = (): void => { cfg = { ...CFG_DEFAULTS }; notifyCfg(); syncHostCfg() }
