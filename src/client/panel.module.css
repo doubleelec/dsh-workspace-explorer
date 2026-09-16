@@ -65,14 +65,14 @@
   --dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2, rgba(128,128,128,.4));
   --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2, rgba(128,128,128,.6));
 }
-.dshwe-head { display: flex; align-items: center; gap: 8px; flex: none; padding: 14px 16px 12px 18px; border-bottom: 1px solid var(--dsw-alias-border-l3, rgba(128,128,128,.2)); }
+.dshwe-head { display: flex; align-items: center; gap: 8px; flex: none; padding: 8px 12px 8px 14px; border-bottom: 1px solid var(--dsw-alias-border-l3, rgba(128,128,128,.2)); }
 .dshwe-head-ico { color: var(--dsw-alias-state-business-primary, #4176e6); display: inline-flex; flex: none; }
-.dshwe-title { font-size: 15px; font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 标题只显示目录名、左省略(路径前段无信息,尾段才是身份);纵向收窄 */
+.dshwe-title { font-size: 13px; font-weight: 600; flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; direction: rtl; text-align: left; text-overflow: ellipsis; }
 .dshwe-icobtn { border: 0; background: transparent; color: var(--dsw-alias-label-secondary, #9a9a9a); width: 28px; height: 28px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex: none; }
 .dshwe-icobtn:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,.14)); color: var(--dsw-alias-label-primary, #e8e8e8); }
-.dshwe-selrow { display: flex; gap: 8px; padding: 12px 16px 4px; align-items: center; }
-.dshwe-sel, .dshwe-filter { flex: 1; min-width: 0; height: 30px; background: transparent; color: var(--dsw-alias-label-primary, #e8e8e8); border: 1px solid var(--dsw-alias-border-l2, rgba(128,128,128,.35)); border-radius: 8px; padding: 0 8px; font: inherit; font-size: 12.5px; outline: none; }
-.dshwe-sel:focus-visible, .dshwe-filter:focus-visible { border-color: var(--dsw-alias-state-business-primary, #4176e6); }
+.dshwe-filter { flex: 1; min-width: 0; height: 30px; background: transparent; color: var(--dsw-alias-label-primary, #e8e8e8); border: 1px solid var(--dsw-alias-border-l2, rgba(128,128,128,.35)); border-radius: 8px; padding: 0 8px; font: inherit; font-size: 12.5px; outline: none; }
+.dshwe-filter:focus-visible { border-color: var(--dsw-alias-state-business-primary, #4176e6); }
 .dshwe-filter::placeholder { color: var(--dsw-alias-label-caption, #8a8a8a); }
 .dshwe-filterrow { display: flex; gap: 6px; padding: 0 16px 6px; align-items: center; }
 .dshwe-filter-clear { flex: none; border: 0; background: transparent; color: var(--dsw-alias-label-secondary, #9a9a9a); width: 26px; height: 26px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }

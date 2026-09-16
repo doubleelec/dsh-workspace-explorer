@@ -9,7 +9,7 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import type { InputTriggerSource } from '@deepseek-ai/dsh-client-ui-input-trigger/client'
 import styles from './panel.module.css'
-import { basename, extOf, fmtSize, formatTreeBlock } from './format'
+import { basename, extOf, fmtSize, formatTreeBlock, visibleEntries } from './format'
 import { isMarkdownFile, parseMarkdown } from './markdown'
 import type { MdInline, MdNode } from './markdown'
 import { isMermaidLang, loadMermaid } from './mermaid'
@@ -67,7 +67,7 @@ const DICTS: Record<string, Record<string, string>> = {
     'settings.refStyle': '文件引用格式', 'settings.refStyle.rel': '相对路径', 'settings.refStyle.abs': '绝对路径',
     'settings.restore': '恢复默认', 'settings.note': '配置在本次会话内生效,重启插件后恢复默认。',
     'settings.nav': '工作区文件', 'settings.version': '版本 v{ver}',
-    'star.ask': '⭐ 顺手留颗 Star，维护者能高兴一整天',
+    'star.ask': '⭐ 授人 Star，手留余香',
     'star.cta': '★ 给一颗 Star',
     'drawer.tip': '文件目录', 'drawer.open': '打开文件抽屉', 'drawer.label': '工作区文件',
   },
@@ -105,7 +105,7 @@ const DICTS: Record<string, Record<string, string>> = {
     'settings.refStyle': 'File reference format', 'settings.refStyle.rel': 'Relative path', 'settings.refStyle.abs': 'Absolute path',
     'settings.restore': 'Reset to defaults', 'settings.note': 'Settings apply for this run; they reset when the plugin restarts.',
     'settings.nav': 'Workspace Explorer', 'settings.version': 'Version v{ver}',
-    'star.ask': '⭐ Drop a Star if it helped — it makes the maintainer\'s day',
+    'star.ask': '⭐ Give Stars, keep the fragrance',
     'star.cta': '★ Give a Star',
     'drawer.tip': 'Files', 'drawer.open': 'Open files drawer', 'drawer.label': 'Workspace Files',
   },
@@ -165,7 +165,7 @@ interface PeekResult {
   lineCount?: number | null; startLine?: number; content?: string; hasMore?: boolean
 }
 interface TreeResult { ok: boolean; error?: string; name?: string; entries?: WsEntry[]; entryCount?: number; truncated?: boolean }
-interface ConfigResult { ok: boolean; ignore?: string[]; hideDotDirs?: boolean; max?: number; peekMaxLines?: number }
+interface ConfigResult { ok: boolean; ignore?: string[]; max?: number; peekMaxLines?: number }
 
 // ---------- 运行期配置(内存级;面板设置 Tab 与 DSH 设置页共享) ----------
 const NOISE = ['.git', 'node_modules', '__pycache__', '.venv', 'venv', '.pytest_cache', '.ruff_cache', '.mypy_cache', 'dist', 'build', '.next', '.nuxt', 'coverage', '.idea', 'target']
@@ -182,7 +182,7 @@ const cfgListeners = new Set<(c: WsCfg) => void>()
 const getCfg = (): WsCfg => cfg
 const notifyCfg = (): void => { cfgListeners.forEach((fn) => fn(cfg)) }
 const syncHostCfg = (): void => {
-  void api<ConfigResult>('config', { ignore: cfg.hideNoise ? NOISE.slice() : [], hideDotDirs: cfg.hideNoise }).catch(() => {})
+  void api<ConfigResult>('config', { ignore: cfg.hideNoise ? NOISE.slice() : [] }).catch(() => {})
 }
 const setCfg = (patch: Partial<WsCfg>): void => { cfg = { ...cfg, ...patch }; notifyCfg(); syncHostCfg() }
 const resetCfg = (): void => { cfg = { ...CFG_DEFAULTS }; notifyCfg(); syncHostCfg() }
@@ -613,9 +613,7 @@ function Panel(props: {
   fullscreen: boolean
   onToggleFullscreen: () => void
 }) {
-  const wsState = props.useWorkspaces((s: unknown) => s) as { items?: Array<{ workspaceId: string; path: string; title: string }>; recentWorkspaceId?: string; state?: string }
   const sessions = props.useSessions((s: unknown) => s) as { current?: string; byId?: Record<string, { cwd?: string }> }
-  const workspaces = wsState.items ?? []
   const currentSummary = sessions.current && sessions.byId ? sessions.byId[sessions.current] : undefined
   const cwd = currentSummary?.cwd
 
@@ -632,24 +630,12 @@ function Panel(props: {
   const [c, setC] = useState(getCfg())
   useEffect(() => subscribeCfg(setC), [])
 
-  const recentItem = workspaces.find((w) => w.workspaceId === wsState.recentWorkspaceId)
-  const firstItem = workspaces[0]
-
+  // root 永远跟随会话 cwd(下拉框已删:单工作区是唯一现实场景,多工作区边际收益不抵维护成本)
   useEffect(() => {
-    if (root !== null) return
-    const cand = cwd ?? recentItem?.path ?? firstItem?.path
-    if (cand) setRoot(cand)
-  }, [root, cwd, wsState.state, recentItem, firstItem])
-
-  // 当前 root 已不在可用工作区/当前目录里(会话 cwd 变化等)时,跟随回退,避免下拉框空白
-  const knownRoots = new Set<string>()
-  if (cwd) knownRoots.add(cwd)
-  for (const w of workspaces) knownRoots.add(w.path)
-  useEffect(() => {
-    if (root === null || knownRoots.has(root)) return
-    setRoot(cwd ?? workspaces[0]?.path ?? null)
+    const cand = cwd ?? null
+    if (cand !== root) setRoot(cand)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [root, cwd, wsState.items])
+  }, [cwd])
 
   const loadDir = useCallback(async (r: string, rel: string) => {
     setDirs((d) => ({ ...d, [rel]: { loading: true, error: null, entries: d[rel]?.entries ?? [], truncated: false } }))
@@ -837,8 +823,8 @@ function Panel(props: {
     try {
       const p = await workspacesSvc.pickDirectory()
       if (!p) return
-      const v = await workspacesSvc.create({ path: p })
-      if (v?.path) setRoot(v.path)
+      await workspacesSvc.create({ path: p })
+      // root 跟随会话 cwd:新建后等用户切会话,面板自动跟过去,不再手动 setRoot
     } catch (err) {
       console.warn('addWorkspace failed', String((err as Error)?.message ?? err))
     }
@@ -869,15 +855,15 @@ function Panel(props: {
   const collectMatches = (rel: string, out: WsEntry[]): void => {
     const data = dirs[rel]
     if (!data) return
-    for (const entry of data.entries) {
+    for (const entry of visibleEntries(data.entries, c.hideNoise)) {
       if (entry.name.toLowerCase().includes(q)) out.push(entry)
       if (entry.type === 'directory') collectMatches(entry.rel, out)
     }
   }
 
-  // 搜索所有文件（包括未展开的目录）
+  // 搜索所有文件（包括未展开的目录）;面板内搜索是展示,跟随隐藏开关(@ 菜单走 searchFiles 全量,不受影响)
   const collectAllMatches = (out: WsEntry[]): void => {
-    for (const f of searchFiles) {
+    for (const f of visibleEntries(searchFiles, c.hideNoise)) {
       if (f.name.toLowerCase().includes(q) || f.rel.toLowerCase().includes(q)) {
         out.push({
           name: f.name,
@@ -901,7 +887,7 @@ function Panel(props: {
     const walk = (rel: string): void => {
       const data = dirs[rel]
       if (!data) return
-      for (const entry of data.entries) {
+      for (const entry of visibleEntries(data.entries, c.hideNoise)) {
         out.push(entry)
         if (entry.type === 'directory' && expanded[entry.rel]) walk(entry.rel)
       }
@@ -991,7 +977,7 @@ function Panel(props: {
     const data = dirs[rel]
     if (!data) return []
     const rows: React.ReactNode[] = []
-    for (const entry of data.entries) {
+    for (const entry of visibleEntries(data.entries, c.hideNoise)) {
       const isDir = entry.type === 'directory'
       const isExp = isDir && !!expanded[entry.rel]
       rows.push(rowFor(entry, depth, isExp))
@@ -1028,11 +1014,6 @@ function Panel(props: {
     body = <>{renderTree('', 0)}</>
   }
 
-  const options: Array<{ value: string; label: string }> = []
-  if (cwd) options.push({ value: cwd, label: `${tr('ws.current')} · ${basename(cwd)}` })
-  for (const w of workspaces) options.push({ value: w.path, label: `${w.title} · ${w.path}` })
-  const seen = new Set<string>()
-  const uniqOptions = options.filter((o) => (seen.has(o.value) ? false : (seen.add(o.value), true)))
   const rootLabel = root ? basename(root) : ''
 
   let pv: React.ReactNode = null
@@ -1116,13 +1097,7 @@ function Panel(props: {
 
   const filesBody = (
     <>
-      <div className={C('dshwe-selrow')}>
-        <select className={C('dshwe-sel')} value={root ?? ''} onChange={(e) => setRoot(e.target.value)}>
-          {uniqOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
-        <button type="button" className={C('dshwe-addbtn')} onClick={() => void addWorkspace()} title={tr('add.ws')}>+</button>
-      </div>
-      <div className={C('dshwe-filterrow')}>
+      <div className={C('dshwe-filterrow')} style={{ paddingTop: 12 }}>
         <input className={C('dshwe-filter')} type="text" value={filter} placeholder={tr('search.ph')} onChange={(e) => setFilter(e.target.value)} />
         {filter !== '' ? (
           <button type="button" className={C('dshwe-filter-clear')} onClick={() => setFilter('')} title={tr('close')} aria-label={tr('close')}>
@@ -1148,7 +1123,7 @@ function Panel(props: {
         <span className={C('dshwe-head-ico')}>
           <svg viewBox="0 0 16 16" width={17} height={17} aria-hidden="true"><path d={FOLDER_D} fill="currentColor" /></svg>
         </span>
-        <div className={C('dshwe-title')}>{tr('panel.title')}{rootLabel ? ` · ${rootLabel}` : ''}</div>
+        <div className={C('dshwe-title')} title={root ?? tr('panel.title')}>{rootLabel !== '' ? rootLabel : tr('panel.title')}</div>
         <button type="button" className={C('dshwe-icobtn')} onClick={refresh} title={tr('refresh')} aria-label={tr('refresh')}>
           <svg viewBox="0 0 16 16" width={14} height={14} aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.61-3.89M13.5 1.5v3h-3" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" /></svg>
         </button>

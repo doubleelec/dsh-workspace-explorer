@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { basename, extOf, fmtSize, formatTreeBlock } from '../src/client/format'
+import { basename, extOf, fmtSize, formatTreeBlock, normPath } from '../src/client/format'
 
 describe('fmtSize', () => {
   it('renders bytes under 1KB', () => {
@@ -50,8 +50,7 @@ describe('extOf', () => {
   })
 })
 
-describe('formatTreeBlock', () => {
-  it('renders a bare root', () => {
+describe('formatTreeBlock', () => {  it('renders a bare root', () => {
     expect(formatTreeBlock('ws', [], false)).toBe('ws/')
   })
 
@@ -87,5 +86,13 @@ describe('formatTreeBlock', () => {
 
   it('appends a truncation marker', () => {
     expect(formatTreeBlock('ws', [], true)).toBe('ws/\n…')
+  })
+})
+
+describe('normPath', () => {
+  it('normalizes separators, trailing slashes and case', () => {
+    expect(normPath('D:\\Ws\\Proj\\')).toBe('d:/ws/proj')
+    expect(normPath('D:/Ws/Proj')).toBe('d:/ws/proj')
+    expect(normPath('d:/ws/proj/')).toBe('d:/ws/proj')
   })
 })

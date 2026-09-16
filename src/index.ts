@@ -53,7 +53,6 @@ const DEFAULT_IGNORED = ['.git', 'node_modules', '__pycache__', '.venv', 'venv',
 /** @internal 运行期配置(供单元测试调整),不构成公开 API。 */
 export const cfg = {
   ignore: [...DEFAULT_IGNORED],
-  hideDotDirs: true,
   max: 400,
   peekMaxLines: 60,
 }
@@ -102,17 +101,13 @@ export function resolveRel(root: string, rel: string): { abs: string } | { error
   return { abs: rel === '' ? root : root.replace(/\/+$/, '') + '/' + rel }
 }
 
-/** @internal 列一个目录层级(目录优先、按名排序、噪声目录过滤、400 上限)。
- * @param ignoreNoise - true 时隐藏噪声目录(文件树显示用);false 时返回全量
- *   (@ 搜索索引等非显示用途,绝不能被显示开关影响)。 */
-export async function listDir(abs: string, baseRel: string, ignoreNoise = true): Promise<{ entries: WsEntry[]; truncated: boolean }> {
+/** @internal 列一个目录层级(目录优先、按名排序、噪声目录过滤、400 上限)。 */
+export async function listDir(abs: string, baseRel: string): Promise<{ entries: WsEntry[]; truncated: boolean }> {
   const dirents = await readdir(abs, { withFileTypes: true })
   const out: WsEntry[] = []
   for (const d of dirents) {
     if (d.name === '.DS_Store') continue
-    // 噪声过滤只针对目录:命中名单的目录跳过;hideDotDirs 开时外加所有 `.` 开头目录
-    // (.git/.idea/.venv 等)。点开头文件(.env/.gitignore)永远保留。
-    if (ignoreNoise && d.isDirectory() && (cfg.ignore.includes(d.name) || (cfg.hideDotDirs && d.name.startsWith('.')))) continue
+    if (d.isDirectory() && cfg.ignore.includes(d.name)) continue
     const target = join(abs, d.name)
     let size: number | null = null
     if (d.isFile()) {
@@ -217,14 +212,13 @@ export async function sniffBinary(abs: string, size: number): Promise<boolean> {
   return probe.includes(0)
 }
 
-/** @internal 递归收集目录树节点(树根相对 rel 从 '' 开始;受深度/条目预算限制)。
- * 永远不过滤噪声目录 — tree 服务于 @ 搜索索引等非显示用途,显示开关只影响 list。 */
+/** @internal 递归收集目录树节点(树根相对 rel 从 '' 开始;受深度/条目预算限制)。 */
 export async function buildTreeNodes(
   abs: string, rel: string, depth: number, budget: { remaining: number },
   out: Array<{ name: string; type: 'directory' | 'file'; rel: string }>,
 ): Promise<void> {
   if (depth < 0 || budget.remaining <= 0) return
-  const { entries } = await listDir(abs, rel, false)
+  const { entries } = await listDir(abs, rel)
   for (const e of entries) {
     if (budget.remaining <= 0) break
     out.push({ name: e.name, type: e.type, rel: e.rel })
@@ -243,10 +237,9 @@ export default {
         handler: async (req, res) => {
           const body = await readJsonBody(req)
           if (Array.isArray(body.ignore)) cfg.ignore = body.ignore.map((s) => String(s)).filter((s) => s !== '')
-          if (typeof body.hideDotDirs === 'boolean') cfg.hideDotDirs = body.hideDotDirs
           if (typeof body.max === 'number' && body.max >= 1 && body.max <= 2000) cfg.max = Math.floor(body.max)
           if (typeof body.peekMaxLines === 'number' && body.peekMaxLines >= 10 && body.peekMaxLines <= 500) cfg.peekMaxLines = Math.floor(body.peekMaxLines)
-          return writeJson(res, { ok: true, ignore: cfg.ignore, hideDotDirs: cfg.hideDotDirs, max: cfg.max, peekMaxLines: cfg.peekMaxLines })
+          return writeJson(res, { ok: true, ignore: cfg.ignore, max: cfg.max, peekMaxLines: cfg.peekMaxLines })
         },
       },
       {
