@@ -62,7 +62,7 @@ const DICTS: Record<string, Record<string, string>> = {
     'preview.empty': '还没有预览。点击任意文件行，即可在这里查看。',
     'resize.tip': '左下角拖拽调整大小，双击恢复自动',
     'settings.title': '面板设置', 'settings.general': '通用',
-    'settings.hideNoise': '隐藏噪声目录', 'settings.hideNoise.desc': '.git · node_modules · dist 等',
+    'settings.hideNoise': '隐藏噪声目录', 'settings.hideNoise.desc': '. 开头目录 · node_modules · dist 等',
     'settings.showSize': '显示文件大小',
     'settings.refStyle': '文件引用格式', 'settings.refStyle.rel': '相对路径', 'settings.refStyle.abs': '绝对路径',
     'settings.restore': '恢复默认', 'settings.note': '配置在本次会话内生效,重启插件后恢复默认。',
@@ -100,7 +100,7 @@ const DICTS: Record<string, Record<string, string>> = {
     'preview.empty': 'No preview yet. Click any file row to view it here.',
     'resize.tip': 'Drag from the corner to resize, double-click to reset',
     'settings.title': 'Panel settings', 'settings.general': 'General',
-    'settings.hideNoise': 'Hide noise dirs', 'settings.hideNoise.desc': '.git · node_modules · dist …',
+    'settings.hideNoise': 'Hide noise dirs', 'settings.hideNoise.desc': 'dot-dirs · node_modules · dist …',
     'settings.showSize': 'Show file sizes',
     'settings.refStyle': 'File reference format', 'settings.refStyle.rel': 'Relative path', 'settings.refStyle.abs': 'Absolute path',
     'settings.restore': 'Reset to defaults', 'settings.note': 'Settings apply for this run; they reset when the plugin restarts.',
@@ -580,7 +580,6 @@ function SettingsView() {
   const version = (pkg as { version?: string }).version ?? '?'
   return (
     <div className={C('dshwe-set')}>
-      <div className={C('dshwe-setsec')}>{tr('settings.version', { ver: version })}</div>
       <div className={C('dshwe-star-section')}>
         <div className={C('dshwe-star-row')}>
           <div className={C('dshwe-star-info')}>
@@ -601,6 +600,7 @@ function SettingsView() {
         <button type="button" className={C('dshwe-prevbtn')} onClick={resetCfg}>{tr('settings.restore')}</button>
       </div>
       <div className={C('dshwe-setnote')}>{tr('settings.note')}</div>
+      <div className={C('dshwe-setnote')}>{tr('settings.version', { ver: version })}</div>
     </div>
   )
 }

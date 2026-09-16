@@ -107,7 +107,8 @@ export async function listDir(abs: string, baseRel: string): Promise<{ entries: 
   const out: WsEntry[] = []
   for (const d of dirents) {
     if (d.name === '.DS_Store') continue
-    if (d.isDirectory() && cfg.ignore.includes(d.name)) continue
+    // 噪声过滤只针对目录:命中名单的目录跳过,外加所有 `.` 开头目录(.git/.idea/.venv 等)
+    if (d.isDirectory() && (cfg.ignore.includes(d.name) || d.name.startsWith('.'))) continue
     const target = join(abs, d.name)
     let size: number | null = null
     if (d.isFile()) {

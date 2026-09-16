@@ -75,6 +75,20 @@ describe('listDir', () => {
     expect(names).not.toContain('.git')
   })
 
+  it('hides all dot-directories but keeps dot-files', async () => {
+    await fixture()
+    await mkdir(join(dir, '.idea'))
+    await mkdir(join(dir, '.vscode'))
+    await writeFile(join(dir, '.env'), 'x')
+    await writeFile(join(dir, '.gitignore'), 'x')
+    const { entries } = await listDir(dir, '')
+    const names = entries.map((e) => e.name)
+    expect(names).not.toContain('.idea')
+    expect(names).not.toContain('.vscode')
+    expect(names).toContain('.env')
+    expect(names).toContain('.gitignore')
+  })
+
   it('fills sizes for files and null for directories', async () => {
     await fixture()
     const { entries } = await listDir(dir, '')
