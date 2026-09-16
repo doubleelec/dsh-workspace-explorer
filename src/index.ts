@@ -101,14 +101,16 @@ export function resolveRel(root: string, rel: string): { abs: string } | { error
   return { abs: rel === '' ? root : root.replace(/\/+$/, '') + '/' + rel }
 }
 
-/** @internal 列一个目录层级(目录优先、按名排序、噪声目录过滤、400 上限)。 */
-export async function listDir(abs: string, baseRel: string): Promise<{ entries: WsEntry[]; truncated: boolean }> {
+/** @internal 列一个目录层级(目录优先、按名排序、噪声目录过滤、400 上限)。
+ * @param ignoreNoise - true 时隐藏噪声目录(文件树显示用);false 时返回全量
+ *   (@ 搜索索引等非显示用途,绝不能被显示开关影响)。 */
+export async function listDir(abs: string, baseRel: string, ignoreNoise = true): Promise<{ entries: WsEntry[]; truncated: boolean }> {
   const dirents = await readdir(abs, { withFileTypes: true })
   const out: WsEntry[] = []
   for (const d of dirents) {
     if (d.name === '.DS_Store') continue
     // 噪声过滤只针对目录:命中名单的目录跳过,外加所有 `.` 开头目录(.git/.idea/.venv 等)
-    if (d.isDirectory() && (cfg.ignore.includes(d.name) || d.name.startsWith('.'))) continue
+    if (ignoreNoise && d.isDirectory() && (cfg.ignore.includes(d.name) || d.name.startsWith('.'))) continue
     const target = join(abs, d.name)
     let size: number | null = null
     if (d.isFile()) {
@@ -213,13 +215,14 @@ export async function sniffBinary(abs: string, size: number): Promise<boolean> {
   return probe.includes(0)
 }
 
-/** @internal 递归收集目录树节点(树根相对 rel 从 '' 开始;受深度/条目预算限制)。 */
+/** @internal 递归收集目录树节点(树根相对 rel 从 '' 开始;受深度/条目预算限制)。
+ * 永远不过滤噪声目录 — tree 服务于 @ 搜索索引等非显示用途,显示开关只影响 list。 */
 export async function buildTreeNodes(
   abs: string, rel: string, depth: number, budget: { remaining: number },
   out: Array<{ name: string; type: 'directory' | 'file'; rel: string }>,
 ): Promise<void> {
   if (depth < 0 || budget.remaining <= 0) return
-  const { entries } = await listDir(abs, rel)
+  const { entries } = await listDir(abs, rel, false)
   for (const e of entries) {
     if (budget.remaining <= 0) break
     out.push({ name: e.name, type: e.type, rel: e.rel })

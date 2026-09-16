@@ -324,12 +324,16 @@ describe('buildTreeNodes', () => {
     expect(out.length).toBe(0)
   })
 
-  it('excludes noise directories', async () => {
+  it('buildTreeNodes never filters (@ index must see everything)', async () => {
     await mkdir(join(dir, 'node_modules'))
+    await mkdir(join(dir, '.idea'))
     await writeFile(join(dir, 'node_modules/x.js'), 'x')
     const out: Array<{ name: string; type: 'directory' | 'file'; rel: string }> = []
     const budget = { remaining: 100 }
     await buildTreeNodes(dir, '', 2, budget, out)
-    expect(out.map((e) => e.rel)).not.toContain('node_modules')
+    const rels = out.map((e) => e.rel)
+    expect(rels).toContain('node_modules')
+    expect(rels).toContain('node_modules/x.js')
+    expect(rels).toContain('.idea')
   })
 })
