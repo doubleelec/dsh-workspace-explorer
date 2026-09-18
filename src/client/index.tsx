@@ -49,6 +49,7 @@ const DICTS: Record<string, Record<string, string>> = {
     'add.ws': '添加工作区', 'dir.tree.fail': '目录树生成失败: ',
     'sel.count': '已选 {n} 项', 'sel.insert': '插入所选', 'sel.clear': '清除',
     'preview.page': '第 {n} 页', 'preview.lines': '{n} 行', 'preview.prev': '上一页', 'preview.next': '下一页',
+    'font.dec': '缩小字体', 'font.inc': '放大字体', 'font.reset': '重置字体大小',
     'edit': '编辑', 'edit.save': '保存', 'edit.discard': '放弃', 'edit.cancel': '取消',
     'edit.dirty': '已修改', 'edit.saving': '保存中…', 'edit.save.fail': '保存失败: ',
     'edit.save.ok': '已保存', 'edit.confirm.discard': '放弃修改？', 'edit.readonly': '只读文件',
@@ -87,6 +88,7 @@ const DICTS: Record<string, Record<string, string>> = {
     'add.ws': 'Add workspace', 'dir.tree.fail': 'Folder tree failed: ',
     'sel.count': '{n} selected', 'sel.insert': 'Insert', 'sel.clear': 'Clear',
     'preview.page': 'Page {n}', 'preview.lines': '{n} lines', 'preview.prev': 'Previous page', 'preview.next': 'Next page',
+    'font.dec': 'Decrease font size', 'font.inc': 'Increase font size', 'font.reset': 'Reset font size',
     'edit': 'Edit', 'edit.save': 'Save', 'edit.discard': 'Discard', 'edit.cancel': 'Cancel',
     'edit.dirty': 'Modified', 'edit.saving': 'Saving…', 'edit.save.fail': 'Save failed: ',
     'edit.save.ok': 'Saved', 'edit.confirm.discard': 'Discard changes?', 'edit.readonly': 'Read-only',
@@ -627,6 +629,11 @@ function Panel(props: {
   const [tab, setTab] = useState<'files' | 'preview' | 'settings'>(() => getSavedTab())
   // MD 渲染视图切换(每个文件独立记忆初始为渲染视图;切文件时重置)
   const [mdView, setMdView] = useState<'rendered' | 'source'>(() => getSavedMdView())
+  // 预览字体缩放(档位记忆在本文件模块级,切文件/重开不丢;纯展示,不动 host)
+  const [fontStep, setFontStep] = useState(0)
+  const fontScale = [0.85, 1, 1.18, 1.36, 1.56][Math.min(Math.max(fontStep + 1, 0), 4)] ?? 1
+  const fontDec = (): void => setFontStep((s) => Math.max(-1, s - 1))
+  const fontInc = (): void => setFontStep((s) => Math.min(3, s + 1))
   const [c, setC] = useState(getCfg())
   useEffect(() => subscribeCfg(setC), [])
 
@@ -1045,9 +1052,9 @@ function Panel(props: {
           spellCheck={false} />
       )
     } else if (mdRendered && mdView === 'rendered') {
-      contentArea = <div className={C('dshwe-md')}>{renderMdBlocks(parseMarkdown(d?.content ?? ''), preview.entry.rel)}</div>
+      contentArea = <div className={C('dshwe-md')} style={{ fontSize: `${fontScale}em` }}>{renderMdBlocks(parseMarkdown(d?.content ?? ''), preview.entry.rel)}</div>
     } else {
-      contentArea = <pre className={C('dshwe-preview-pre')}>{d?.content ?? ''}</pre>
+      contentArea = <pre className={C('dshwe-preview-pre')} style={{ fontSize: `${fontScale}em` }}>{d?.content ?? ''}</pre>
     }
 
     pv = (
@@ -1067,8 +1074,14 @@ function Panel(props: {
             </>
           ) : (
             <>
-              <button type="button" className={C('dshwe-pager-btn')} disabled={preview.page === 0 || preview.loading} onClick={previewPrev} title={tr('preview.prev')} aria-label={tr('preview.prev')}>‹</button>
-              <button type="button" className={C('dshwe-pager-btn')} disabled={d?.hasMore !== true || preview.loading} onClick={previewNext} title={tr('preview.next')} aria-label={tr('preview.next')}>›</button>
+              {(preview.page > 0 || d?.hasMore === true) && !preview.loading ? (
+                <>
+                  <button type="button" className={C('dshwe-pager-btn')} disabled={preview.page === 0 || preview.loading} onClick={previewPrev} title={tr('preview.prev')} aria-label={tr('preview.prev')}>‹</button>
+                  <button type="button" className={C('dshwe-pager-btn')} disabled={d?.hasMore !== true || preview.loading} onClick={previewNext} title={tr('preview.next')} aria-label={tr('preview.next')}>›</button>
+                </>
+              ) : null}
+              <button type="button" className={C('dshwe-pager-btn')} disabled={fontStep <= -1 || preview.loading} onClick={fontDec} title={tr('font.dec')} aria-label={tr('font.dec')}>A-</button>
+              <button type="button" className={C('dshwe-pager-btn')} disabled={fontStep >= 3 || preview.loading} onClick={fontInc} title={tr('font.inc')} aria-label={tr('font.inc')}>A+</button>
               {mdRendered ? (
                 <button type="button" className={C('dshwe-prevbtn') + (mdView === 'source' ? ` ${C('dshwe-prevbtn-on')}` : '')}
                   onClick={() => { const v = mdView === 'rendered' ? 'source' : 'rendered'; setMdView(v); saveMdView(v) }}
