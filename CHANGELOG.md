@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-09-19
+
+### 新功能 Feature
+
+- **预览字体缩放** — 工具栏默认 `A-` / `A+`(5 档 0.85–1.56,到头禁用),Markdown 渲染/源码/纯文本跟随缩放,编辑态不动;档位切文件/重开保留 / **Preview font zoom** — A-/A+ controls, 5 steps, pager buttons only appear for paged (>512KB) files.
+
+### 维护 Maintenance
+
+- **构建确定性** — CSS 类名映射表排序后输出,无 src 改动时构建零差异,有改动时 diff 只剩真改动;`lib/` 构建产物与 `src/` 同步 / **Deterministic builds** — sorted CSS class map, no more bundle churn.
+
 ## [0.9.0] - 2026-09-16
 
 ### 新功能 Feature
