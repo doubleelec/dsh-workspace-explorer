@@ -15,7 +15,8 @@ import type { MdInline, MdNode } from './markdown'
 import { isMermaidLang, loadMermaid } from './mermaid'
 import { autoPopupHeight, clampPopupHeight, clampPopupWidth, loadManualHeight, loadManualWidth, saveManualHeight, saveManualWidth } from './popupLayout'
 import pkg from '../../package.json'
-import { clearSavedPreview, getSavedMdView, getSavedPreview, getSavedTab, saveMdView, savePreviewRef, savePreviewTab, shouldRestorePreview } from './previewState'
+import { clearSavedPreview, getSavedHtmlView, getSavedMdView, getSavedPreview, getSavedTab, saveHtmlView, saveMdView, savePreviewRef, savePreviewTab, shouldRestorePreview } from './previewState'
+import { isHtmlFile } from './html'
 
 const MARKER = 'application/x-dsh-ws-file'
 const C = (k: string): string => styles[k] ?? k
@@ -57,6 +58,8 @@ const DICTS: Record<string, Record<string, string>> = {
     'tab.files': '文件', 'tab.preview': '预览', 'tab.settings': '设置',
     'md.source': '源码', 'md.rendered': '渲染',
     'md.source.tip': '查看 Markdown 源码', 'md.rendered.tip': '查看渲染效果',
+    'html.source': '源码', 'html.rendered': '渲染',
+    'html.source.tip': '查看 HTML 源码', 'html.rendered.tip': '查看渲染效果',
     'mermaid.render': '渲染图表', 'mermaid.loading': '图表加载中…',
     'mermaid.source': '看源码', 'mermaid.diagram': '看图表',
     'mermaid.retry': '重试', 'mermaid.fail': '图表渲染失败: ',
@@ -96,6 +99,8 @@ const DICTS: Record<string, Record<string, string>> = {
     'tab.files': 'Files', 'tab.preview': 'Preview', 'tab.settings': 'Settings',
     'md.source': 'Source', 'md.rendered': 'Rendered',
     'md.source.tip': 'View Markdown source', 'md.rendered.tip': 'View rendered output',
+    'html.source': 'Source', 'html.rendered': 'Rendered',
+    'html.source.tip': 'View HTML source', 'html.rendered.tip': 'View rendered output',
     'mermaid.render': 'Render diagram', 'mermaid.loading': 'Loading diagram…',
     'mermaid.source': 'Source', 'mermaid.diagram': 'Diagram',
     'mermaid.retry': 'Retry', 'mermaid.fail': 'Diagram render failed: ',
@@ -627,8 +632,9 @@ function Panel(props: {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [selAnchor, setSelAnchor] = useState<string | null>(null)
   const [tab, setTab] = useState<'files' | 'preview' | 'settings'>(() => getSavedTab())
-  // MD 渲染视图切换(每个文件独立记忆初始为渲染视图;切文件时重置)
+  // MD/HTML 渲染视图切换(切文件时重置为渲染视图;重开弹窗时恢复记忆)
   const [mdView, setMdView] = useState<'rendered' | 'source'>(() => getSavedMdView())
+  const [htmlView, setHtmlView] = useState<'rendered' | 'source'>(() => getSavedHtmlView())
   // 预览字体缩放(档位记忆在本文件模块级,切文件/重开不丢;纯展示,不动 host)
   const [fontStep, setFontStep] = useState(0)
   const fontScale = [0.85, 1, 1.18, 1.36, 1.56][Math.min(Math.max(fontStep + 1, 0), 4)] ?? 1
@@ -663,6 +669,7 @@ function Panel(props: {
     const saved = getSavedPreview()
     if (shouldRestorePreview(saved, root)) {
       setMdView(getSavedMdView())
+      setHtmlView(getSavedHtmlView())
       void loadPreviewPage(
         { name: saved.name, type: 'file', path: `${root.replace(/\/+$/, '')}/${saved.rel}`, rel: saved.rel, size: saved.size },
         0,
@@ -747,6 +754,8 @@ function Panel(props: {
   const openPreview = (entry: WsEntry): void => {
     setMdView('rendered')
     saveMdView('rendered')
+    setHtmlView('rendered')
+    saveHtmlView('rendered')
     if (root !== null) savePreviewRef(root, entry.rel, entry.name, entry.size)
     setTab('preview')
     savePreviewTab('preview')
@@ -1037,8 +1046,10 @@ function Panel(props: {
 
     let contentArea: React.ReactNode
     const isMd = isMarkdownFile(preview.entry.name)
-    // MD 渲染视图只在整读成功、无分页时启用(分页内容不完整,渲染会断裂)
+    const isHtml = isHtmlFile(preview.entry.name)
+    // MD/HTML 渲染视图只在整读成功、无分页时启用(分页内容不完整,渲染会断裂)
     const mdRendered = isMd && !isEdit && !preview.loading && preview.error === null && !!d && !d.binary && d.hasMore !== true && preview.page === 0
+    const htmlRendered = isHtml && !isEdit && !preview.loading && preview.error === null && !!d && !d.binary && d.hasMore !== true && preview.page === 0
     if (preview.loading) {
       contentArea = <div className={C('dshwe-note')}><span className={C('dshwe-spin')} />{tr('read')}</div>
     } else if (preview.error) {
@@ -1053,6 +1064,9 @@ function Panel(props: {
       )
     } else if (mdRendered && mdView === 'rendered') {
       contentArea = <div className={C('dshwe-md')} style={{ fontSize: `${fontScale}em` }}>{renderMdBlocks(parseMarkdown(d?.content ?? ''), preview.entry.rel)}</div>
+    } else if (htmlRendered && htmlView === 'rendered') {
+      // 简单 HTML 渲染:sandbox 空(禁脚本/同源/表单/顶层跳转)只做静态展示,无清洗器依赖
+      contentArea = <iframe className={C('dshwe-html')} sandbox="" srcDoc={d?.content ?? ''} title={preview.entry.name} referrerPolicy="no-referrer" />
     } else {
       contentArea = <pre className={C('dshwe-preview-pre')} style={{ fontSize: `${fontScale}em` }}>{d?.content ?? ''}</pre>
     }
@@ -1080,13 +1094,20 @@ function Panel(props: {
                   <button type="button" className={C('dshwe-pager-btn')} disabled={d?.hasMore !== true || preview.loading} onClick={previewNext} title={tr('preview.next')} aria-label={tr('preview.next')}>›</button>
                 </>
               ) : null}
-              <button type="button" className={C('dshwe-pager-btn')} disabled={fontStep <= -1 || preview.loading} onClick={fontDec} title={tr('font.dec')} aria-label={tr('font.dec')}>A-</button>
-              <button type="button" className={C('dshwe-pager-btn')} disabled={fontStep >= 3 || preview.loading} onClick={fontInc} title={tr('font.inc')} aria-label={tr('font.inc')}>A+</button>
+              <button type="button" className={C('dshwe-pager-btn')} disabled={fontStep <= -1 || preview.loading || (htmlRendered && htmlView === 'rendered')} onClick={fontDec} title={tr('font.dec')} aria-label={tr('font.dec')}>A-</button>
+              <button type="button" className={C('dshwe-pager-btn')} disabled={fontStep >= 3 || preview.loading || (htmlRendered && htmlView === 'rendered')} onClick={fontInc} title={tr('font.inc')} aria-label={tr('font.inc')}>A+</button>
               {mdRendered ? (
                 <button type="button" className={C('dshwe-prevbtn') + (mdView === 'source' ? ` ${C('dshwe-prevbtn-on')}` : '')}
                   onClick={() => { const v = mdView === 'rendered' ? 'source' : 'rendered'; setMdView(v); saveMdView(v) }}
                   title={mdView === 'rendered' ? tr('md.source.tip') : tr('md.rendered.tip')}>
                   {mdView === 'rendered' ? tr('md.source') : tr('md.rendered')}
+                </button>
+              ) : null}
+              {htmlRendered ? (
+                <button type="button" className={C('dshwe-prevbtn') + (htmlView === 'source' ? ` ${C('dshwe-prevbtn-on')}` : '')}
+                  onClick={() => { const v = htmlView === 'rendered' ? 'source' : 'rendered'; setHtmlView(v); saveHtmlView(v) }}
+                  title={htmlView === 'rendered' ? tr('html.source.tip') : tr('html.rendered.tip')}>
+                  {htmlView === 'rendered' ? tr('html.source') : tr('html.rendered')}
                 </button>
               ) : null}
               {canEdit ? <button type="button" className={C('dshwe-prevbtn')} onClick={() => void enterEditMode()}>{tr('edit')}</button> : null}
@@ -1287,21 +1308,33 @@ function DrawerRoot(props: {
   // 弹窗每次打开时重测(避免沿用上一次会话/键盘状态的旧高度);关闭不重置手动高度
   useEffect(() => { if (on) setRect(measurePopup()) }, [on])
   // 左下角拉手:一次拖动同时改宽高(左拉变宽/右推变窄,下拉变高/上推变矮),
-  // 松开即存 localStorage;双击同时恢复自动高度 + 设置宽度(鼠标 + 触屏)
-  const resizeRef = useRef<{ startX: number; startY: number; startW: number; startH: number; curW: number; curH: number } | null>(null)
+  // 松开即存 localStorage;双击同时恢复自动高度 + 设置宽度(鼠标 + 触屏);
+  // 全屏时拉手仍可见,第一次拖动即退出全屏(窗口状态同步恢复普通弹窗)
+  const resizeRef = useRef<{ startX: number; startY: number; startW: number; startH: number; curW: number; curH: number; moved: boolean; wasFullscreen: boolean } | null>(null)
+  const fullscreenRef = useRef(fullscreen)
+  fullscreenRef.current = fullscreen
+  const fullRectRef = useRef(fullRect)
+  fullRectRef.current = fullRect
   const applyResizeDelta = (clientX: number, clientY: number): void => {
-    if (!resizeRef.current) return
+    const st = resizeRef.current
+    if (!st) return
+    // 全屏中拖拽 = 退出最大化(第一次真正移动时退,单纯点按不动不退)
+    if (!st.moved) {
+      st.moved = true
+      if (st.wasFullscreen) setFullscreen(false)
+    }
     const vh = Math.min(window.innerHeight, window.visualViewport?.height ?? window.innerHeight)
-    const w = clampPopupWidth(resizeRef.current.startW - (clientX - resizeRef.current.startX), window.innerWidth)
-    const h = clampPopupHeight(resizeRef.current.startH + (clientY - resizeRef.current.startY), rectRef.current.top, vh)
-    resizeRef.current.curW = w
-    resizeRef.current.curH = h
+    const w = clampPopupWidth(st.startW - (clientX - st.startX), window.innerWidth)
+    const h = clampPopupHeight(st.startH + (clientY - st.startY), rectRef.current.top, vh)
+    st.curW = w
+    st.curH = h
     setManualW(w)
     setManualH(h)
     setRect((r) => ({ ...r, height: h }))
   }
   const endResize = (): void => {
-    if (resizeRef.current) { saveManualWidth(resizeRef.current.curW); saveManualHeight(resizeRef.current.curH) }
+    // 点按无移动:直接丢弃(尤其全屏下点一下不应把全屏尺寸存成手动尺寸)
+    if (resizeRef.current?.moved) { saveManualWidth(resizeRef.current.curW); saveManualHeight(resizeRef.current.curH) }
     resizeRef.current = null
     document.removeEventListener('mousemove', onResizeMove)
     document.removeEventListener('mouseup', endResize)
@@ -1314,21 +1347,31 @@ function DrawerRoot(props: {
   }
   const onResizeDown = (e: React.MouseEvent): void => {
     e.preventDefault()
-    const startW = manualW ?? c.width
-    const startH = manualH ?? rectRef.current.height
-    resizeRef.current = { startX: e.clientX, startY: e.clientY, startW, startH, curW: startW, curH: startH }
+    // 全屏中起拖:起点取全屏矩形,退出后从当前视觉尺寸连续收缩,不跳变;
+    // 普通态起点取手动/自动尺寸(与之前一致)
+    const wasFullscreen = fullscreenRef.current
+    const fr = fullRectRef.current
+    const startW = wasFullscreen ? fr.width : manualW ?? c.width
+    const startH = wasFullscreen ? fr.height : manualH ?? rectRef.current.height
+    resizeRef.current = { startX: e.clientX, startY: e.clientY, startW, startH, curW: startW, curH: startH, moved: false, wasFullscreen }
     document.addEventListener('mousemove', onResizeMove)
     document.addEventListener('mouseup', endResize)
   }
   const onResizeTouchStart = (e: React.TouchEvent): void => {
     if (e.touches.length === 0) return
-    const startW = manualW ?? c.width
-    const startH = manualH ?? rectRef.current.height
-    resizeRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, startW, startH, curW: startW, curH: startH }
+    const wasFullscreen = fullscreenRef.current
+    const fr = fullRectRef.current
+    const startW = wasFullscreen ? fr.width : manualW ?? c.width
+    const startH = wasFullscreen ? fr.height : manualH ?? rectRef.current.height
+    resizeRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, startW, startH, curW: startW, curH: startH, moved: false, wasFullscreen }
     document.addEventListener('touchmove', onResizeTouchMove, { passive: false })
     document.addEventListener('touchend', endResize)
   }
-  const onResizeReset = (): void => { setManualH(null); saveManualHeight(null); setManualW(null); saveManualWidth(null); setRect(measurePopup()) }
+  const onResizeReset = (): void => {
+    // 全屏时双击同样先退全屏,再恢复自动高度 + 设置宽度
+    if (fullscreenRef.current) setFullscreen(false)
+    setManualH(null); saveManualHeight(null); setManualW(null); saveManualWidth(null); setRect(measurePopup())
+  }
   const popupH = manualH ?? rect.height
   const popupW = manualW ?? c.width
   useEffect(() => {
@@ -1406,7 +1449,7 @@ function DrawerRoot(props: {
   return (
     <div className={C('dshwe-layer')}>
       {dragKind !== null ? <div className={C('dshwe-hint')}><div className={C('dshwe-hint-chip')}><svg viewBox="0 0 16 16" width={16} height={16} aria-hidden="true"><path d="M8 3.5v6M5.7 7.2L8 9.5l2.3-2.3M3.5 12.5h9" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" /></svg>{dragKind === 'dir' ? tr('drop.hint.dir') : tr('drop.hint')}</div></div> : null}
-      {on || closing ? <div data-dshwe-popup="" className={C('dshwe-popup') + (shown ? ` ${C('dshwe-popup-on')}` : '') + (fullscreen ? ` ${C('dshwe-popup-full')}` : '')} style={fullscreen ? { top: fullRect.top, left: fullRect.left, width: fullRect.width, height: fullRect.height } as React.CSSProperties : { top: rect.top, height: popupH, width: popupW, '--dshwe-base-w': `${popupW}px` } as React.CSSProperties}><Panel {...props} onDraggingChange={setDragKind} fullscreen={fullscreen} onToggleFullscreen={toggleFullscreen} />{fullscreen ? null : <div className={C('dshwe-resize-corner')} onMouseDown={onResizeDown} onTouchStart={onResizeTouchStart} onDoubleClick={onResizeReset} title={tr('resize.tip')} role="separator" aria-orientation="horizontal" aria-label={tr('resize.tip')}><span className={C('dshwe-resize-corner-bar')} /></div>}</div> : null}
+      {on || closing ? <div data-dshwe-popup="" className={C('dshwe-popup') + (shown ? ` ${C('dshwe-popup-on')}` : '') + (fullscreen ? ` ${C('dshwe-popup-full')}` : '')} style={fullscreen ? { top: fullRect.top, left: fullRect.left, width: fullRect.width, height: fullRect.height } as React.CSSProperties : { top: rect.top, height: popupH, width: popupW, '--dshwe-base-w': `${popupW}px` } as React.CSSProperties}><Panel {...props} onDraggingChange={setDragKind} fullscreen={fullscreen} onToggleFullscreen={toggleFullscreen} /><div className={C('dshwe-resize-corner')} onMouseDown={onResizeDown} onTouchStart={onResizeTouchStart} onDoubleClick={onResizeReset} title={tr('resize.tip')} role="separator" aria-orientation="horizontal" aria-label={tr('resize.tip')}><span className={C('dshwe-resize-corner-bar')} /></div></div> : null}
     </div>
   )
 }

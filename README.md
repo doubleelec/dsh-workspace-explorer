@@ -53,13 +53,14 @@ Inspired by the VS Code / Cursor project tree, filling the gap of a missing dire
 - 🗂 **Lazy-loading tree** — directories load on demand; noise dirs (`node_modules`, `.git`, `dist`, `__pycache__`, …) are hidden automatically
 - 🎨 **File-type icons** — filled, color-coded document badges per extension (TS / JS / Python / JSON / Markdown / image / config / shell, …); amber folders that brighten when expanded; the actively previewed file gets a blue dot
 - 🖱 **Click to preview** — click a file row (or `Enter` / `Space`) to open it in the Preview tab; the **⏎ button** at the row's head inserts the `@path` reference into the composer (`@` / `i` shortcut works too). The tab, the file and the rendered/source view survive panel close/reopen.
-- ⛶ **Fullscreen mode** — the header toggle (next to close) expands the popup over the whole session area for big files / long Markdown; click again to restore, `Esc` exits fullscreen first
+- ⛶ **Fullscreen mode** — the header toggle (next to close) expands the popup over the whole session area for big files / long Markdown; click again to restore, `Esc` exits fullscreen first; the corner handle stays visible — dragging it exits fullscreen and lands back in the normal popup
 - 🖱 **Drag & drop** — drop a file into the composer to insert at the caret (fullscreen dashed hint); dropping elsewhere appends to the end. **Folders are draggable too** — dropping a directory inserts a depth-limited compact tree listing
 - 🖱 **Multi-select & batch insert** — Shift / ⌘ click to select multiple rows, then insert all of them at once (files → references, folders → tree listings)
 - ⌨️ **`@` mention anywhere** — type `@` in the composer to fuzzy-find workspace files (name or path, 50 suggestions, 500-path lexicon highlight) — works even with the panel closed, via sessions-cwd auto-discovery
 - 🌓 **Theme-aware** — built entirely on DSH's `--dsw-alias-*` design tokens; adapts to light/dark with a native dialog look (16px radius, lv3 shadow)
 - 🔍 **Search & filter** — filter files by name across the whole tree (up to 5000 entries / 10 levels, match count shown)
 - 📝 **Markdown rendering** — `.md` / `.mdx` preview rendered by default (headings, bold/italic/strike, code blocks with language tag, quotes, ordered/unordered/task lists, tables, horizontal rules); one-click toggle back to source; oversized paged files fall back to source automatically
+- 🌐 **Simple HTML preview** — `.html` / `.htm` / `.xhtml` preview rendered by default in a sandboxed iframe (scripts / same-origin / forms / top navigation all disabled, no extra dependency); one-click toggle back to source; oversized paged files fall back to source automatically
 - 📊 **Mermaid diagrams** — `mermaid` code blocks show a Render button; the library (mermaid@10, jsDelivr primary + unpkg fallback) loads on first click only, so the bundle stays +6 KB; `securityLevel: strict`, source fallback on offline/CSP/syntax errors
 - ✏️ **Preview tab** — whole-file view (≤ 512 KB in one read, paged beyond that with total lines & current page); insert the reference, or paste the full content for small files (≤ 32 KB)
 - 📝 **File editing** — click "Edit" in the preview panel to enter textarea mode; save writes directly to disk with change detection (warns if the file was modified externally)
@@ -90,7 +91,7 @@ dsh plugin --profile web add -w @doubleelec/dsh-workspace-explorer@latest
 
 ## Version
 
-Current version **v0.9.0** — **Mermaid diagrams** (CDN lazy-load, click-to-render), **preview restore** (tab + file + Markdown view), and the XSS-test fix.
+Current version **v0.10.0** — **simple HTML preview** (sandboxed iframe, source toggle) and **fullscreen keeps the resize handle** (drag to exit maximized mode).
 See [CHANGELOG.md](./CHANGELOG.md) for release notes.
 
 ## Roadmap

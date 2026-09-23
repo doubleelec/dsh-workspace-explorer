@@ -1,13 +1,14 @@
 /**
  * 预览恢复状态(模块级内存,Panel 卸载后仍保留)。
  *
- * 只记 Tab + 预览文件(root/rel/name/size) + MD 渲染/源码视图;
+ * 只记 Tab + 预览文件(root/rel/name/size) + MD/HTML 渲染/源码视图;
  * mermaid 渲染态不记——MermaidBlock 每次挂载都从 idle 开始,
  * 重开预览即回到「渲染图表」按钮,不自动拉 CDN。
  */
 
 export type PreviewTab = 'files' | 'preview' | 'settings'
 export type MdView = 'rendered' | 'source'
+export type HtmlView = 'rendered' | 'source'
 
 export interface SavedPreviewRef {
   root: string
@@ -19,6 +20,7 @@ export interface SavedPreviewRef {
 let savedTab: PreviewTab = 'files'
 let savedPreview: SavedPreviewRef | null = null
 let savedMdView: MdView = 'rendered'
+let savedHtmlView: HtmlView = 'rendered'
 
 export function getSavedTab(): PreviewTab {
   return savedTab
@@ -48,6 +50,14 @@ export function saveMdView(v: MdView): void {
   savedMdView = v
 }
 
+export function getSavedHtmlView(): HtmlView {
+  return savedHtmlView
+}
+
+export function saveHtmlView(v: HtmlView): void {
+  savedHtmlView = v
+}
+
 /** 同 root 才恢复预览(工作区切换后旧 rel 不再有效)。 */
 export function shouldRestorePreview(saved: SavedPreviewRef | null, root: string | null): saved is SavedPreviewRef {
   return saved !== null && root !== null && saved.root === root
@@ -58,4 +68,5 @@ export function __resetPreviewStateForTest(): void {
   savedTab = 'files'
   savedPreview = null
   savedMdView = 'rendered'
+  savedHtmlView = 'rendered'
 }

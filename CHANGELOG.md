@@ -1,6 +1,14 @@
 # Changelog
 
-## [Unreleased]
+## [0.10.0] - 2026-09-23
+
+### 新功能 Feature
+
+- **HTML 简单渲染预览** — `.html` / `.htm` / `.xhtml` 预览默认渲染视图(`<iframe sandbox="" srcDoc>` 静态展示,禁脚本/同源/表单/顶层跳转,无额外依赖),头部可一键切回源码;超大分页文件自动回落源码,编辑态不受影响 / **Simple HTML preview** — `.html` files render by default in a sandboxed iframe with a source toggle; paged files fall back to source.
+
+### 改进 Improvement
+
+- **全屏保留左下角拖拽** — 全屏时拉手仍可见,第一次真正拖动即退出最大化(单纯点按不动不退),起点取全屏矩形连续收缩不跳变;双击同样先退全屏再恢复自动尺寸 / **Fullscreen keeps the resize handle** — dragging in fullscreen exits maximized mode and lands back in the normal popup.
 
 ## [0.9.1] - 2026-09-19
 

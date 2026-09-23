@@ -123,8 +123,9 @@ dsh-workspace-explorer/
 │   └── client/
 │       ├── index.tsx     # Native client half: popup + tree + preview + drag & drop
 │       ├── markdown.ts   # Zero-dep Markdown parser/renderer (XSS-safe)
+│       ├── html.ts       # HTML file detection (sandboxed iframe render)
 │       ├── mermaid.ts    # Mermaid CDN lazy-loader
-│       ├── previewState.ts # Preview restore state (tab + file + MD view)
+│       ├── previewState.ts # Preview restore state (tab + file + MD/HTML view)
 │       ├── format.ts     # Pure formatting helpers
 │       └── popupLayout.ts# Popup geometry math (unit-tested)
 ├── test/                 # vitest suites (format / host / popupLayout / markdown / mermaid / previewState)
@@ -140,14 +141,15 @@ dsh-workspace-explorer/
 | Tree / search index | Depth/budget-limited recursion (`/dsh-we/api/tree`, up to 10 levels / 5000 entries) |
 | File write | `/dsh-we/api/write` with size-based external-change detection |
 | Host→Client RPC | Same-origin `fetch POST /dsh-we/api/*` (path-confined, no arbitrary-path reads) |
-| Popup | `shell.overlay` slot (`useWorkspaces` / `useSessions`), position measured between session header & composer; corner resize with localStorage memory |
+| Popup | `shell.overlay` slot (`useWorkspaces` / `useSessions`), position measured between session header & composer; corner resize with localStorage memory (stays visible in fullscreen — first real drag exits fullscreen); double-click resets |
 | Toggle button | `conversation.session.header.utilities` slot (“Workspace Files” pill: name + icon) |
 | Composer write | `conversation.input.dock` → `inputActions.setDraft`, with `conversation.input` service fallback |
 | `@` mention | `inputTriggers.registerSource` (fuzzy candidates + lexicon highlight), root auto-discovered from sessions cwd |
 | Drag & drop | HTML5 DnD; native caret insert in the textarea, append elsewhere |
 | Markdown | Hand-written parser → React elements (no `innerHTML`); source toggle; paged fallback |
+| HTML | `isHtmlFile` (ext check) → `<iframe sandbox="" srcDoc>` static render, no sanitizer dep; source toggle with module-level view memory; paged fallback |
 | Mermaid | CDN lazy-load (jsDelivr + unpkg fallback), `securityLevel: strict`, click-to-render per block |
-| Preview restore | Module-level memory (tab + file ref + MD view), same-root only; mermaid stays unrendered |
+| Preview restore | Module-level memory (tab + file ref + MD/HTML view), same-root only; mermaid stays unrendered |
 | Theming / i18n | `--dsw-alias-*` CSS variables (light/dark); zh/en via the DSH locale service |
 
 ### Hard-won lessons (native packaging)

@@ -201,6 +201,8 @@
 .dshwe-md-table thead th { background: var(--dsw-alias-bg-layer-1, #222); font-weight: 600; }
 .dshwe-md-table tbody tr:last-child td { border-bottom: 0; }
 .dshwe-prevbtn-on { color: var(--dsw-alias-state-business-primary, #4176e6); border-color: rgba(65,118,230,.5); }
+/* ---- HTML 渲染视图(sandbox iframe 静态展示,占满预览区) ---- */
+.dshwe-html { flex: 1; min-height: 0; align-self: stretch; width: auto; border: 0; background: #fff; border-radius: 10px; margin: 2px 12px 10px; }
 .dshwe-preview-actions { display: flex; align-items: center; gap: 8px; padding: 0 12px 10px; flex: none; }
 /* ---- 编辑器 textarea ---- */
 .dshwe-editor {
