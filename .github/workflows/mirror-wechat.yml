@@ -25,12 +25,21 @@ jobs:
           persist-credentials: false
 
       - name: Setup SSH key
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@v0.9.1
         with:
           ssh-private-key: ${{ secrets.WECHAT_MIRROR_KEY }}
 
+      - name: Trust wechat host key
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -t ed25519 git.weixin.qq.com >> ~/.ssh/known_hosts
+
       - name: Add wechat remote and push
         run: |
+          if [ -z "${{ secrets.WECHAT_MIRROR_KEY }}" ]; then
+            echo "::error::WECHAT_MIRROR_KEY secret is empty. Add the wechat SSH private key at Settings -> Secrets -> Actions, then Re-run this job."
+            exit 1
+          fi
           git remote add wechat "git@git.weixin.qq.com:doubleelec/dsh-workspace-explorer.git" 2>/dev/null || \
             git remote set-url wechat "git@git.weixin.qq.com:doubleelec/dsh-workspace-explorer.git"
-          git push wechat refs/heads/main:refs/heads/main --tags --prune --force-with-lease
+          git push wechat refs/heads/main:refs/heads/main --tags --force-with-lease
