@@ -77,7 +77,8 @@ registry** (mirrors are read-only). Never write the official registry into `.npm
 ```powershell
 cd <repo>
 
-# 1) login (official registry; 2FA needs an OTP)
+# 1) login (official registry ONLY — default registry is a read-only mirror;
+#    always pass --registry explicitly, 2FA needs an OTP)
 npm login --registry=https://registry.npmjs.org/
 
 # 2) sync versions (package.json / dsh.plugin.json / manifest.json),
@@ -90,8 +91,8 @@ npm publish --registry=https://registry.npmjs.org/
 
 # 4) verify + tag the source
 npm view @doubleelec/dsh-workspace-explorer version --registry=https://registry.npmjs.org/
-git tag v0.9.0
-git push elec v0.9.0
+git tag v0.10.1
+git push elec v0.10.1
 ```
 
 Notes: version numbers stay in sync across `package.json` / `dsh.plugin.json` /
