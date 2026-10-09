@@ -451,9 +451,27 @@ const queryConvCol = (header: Element | null): Element | null => {
 const queryHeader = (): Element | null =>
   pickVisible('[data-slot="conversation.session.header"]')
 
-// ---------- 输入桥接口:追加 @引用 文本 ----------
+// ---------- 输入桥接口:插入 @引用 文本 ----------
+// 插入语义:优先插到编辑器光标处(captureInsertion + insertText,官方 InputActions 契约),
+// 只有光标插入被拒(draft 已变/提交中)才退化为末尾追加。绝不整文替换,保护原文。
+interface InputActionsLike {
+  captureInsertion?: () => unknown
+  insertText?: (text: string, span: unknown) => boolean
+  setDraft?: (d: string) => void
+}
+/** 光标插入,被拒回 false(调用方再退化追加) */
+function insertAtCaret(actions: InputActionsLike, text: string): boolean {
+  try {
+    if (typeof actions.captureInsertion !== 'function' || typeof actions.insertText !== 'function') return false
+    const span = actions.captureInsertion()
+    if (span === undefined || span === null) return false
+    return actions.insertText(text, span) === true
+  } catch {
+    return false
+  }
+}
 interface WsBridge {
-  /** 追加文本到输入框(setDraft) */
+  /** 插入文本到输入框(光标处,退化末尾追加) */
   insert(text: string): void
 }
 let bridge: WsBridge | null = null
@@ -478,8 +496,52 @@ const setActiveRoot = (r: string | null): void => {
 let sessionsCwdRoot: string | null = null
 /** 当前会话的 cwd(用于 @ 引用格式化:判断是否可用相对路径) */
 let activeCwd: string | null = null
+const cwdListeners = new Set<(c: string | null) => void>()
+function setActiveCwd(c: string | null): void {
+  if (c === activeCwd) return
+  activeCwd = c
+  cwdListeners.forEach((fn) => fn(c))
+}
+/** 通知根目录订阅者(不碰文件缓存;缓存清除仍只归 setActiveRoot 管) */
+function emitRoot(): void {
+  const r = getEffectiveRoot()
+  rootListeners.forEach((fn) => fn(r))
+}
 function getEffectiveRoot(): string | null {
   return activeWorkspaceRoot ?? sessionsCwdRoot
+}
+
+/**
+ * 订阅有效工作区根目录。
+ *
+ * 背景(DSH 0.2.0 起):`shell.overlay` 等 slot 改传空 props(`renderSlot("shell.overlay", {})`),
+ * 旧的 `props.useSessions` 注入不再存在(调用即 TypeError,整棵面板树崩溃)。
+ * 改为订阅模块级 root(Panel 开关经 setActiveRoot 同步;sessions cwd 经 apply 订阅兜底)。
+ */
+function useEffectiveRoot(): string | null {
+  const [root, setRoot] = useState<string | null>(() => getEffectiveRoot())
+  useEffect(() => {
+    const sync = (): void => {
+      const r = getEffectiveRoot()
+      setRoot((prev) => (prev === r ? prev : r))
+    }
+    rootListeners.add(sync)
+    sync()
+    return () => { rootListeners.delete(sync) }
+  }, [])
+  return root
+}
+
+/** 订阅当前会话 cwd(同上,不再经 slot props 注入) */
+function useActiveCwd(): string | null {
+  const [cwd, setCwd] = useState<string | null>(() => activeCwd)
+  useEffect(() => {
+    const sync = (c: string | null): void => setCwd((prev) => (prev === c ? prev : c))
+    cwdListeners.add(sync)
+    sync(activeCwd)
+    return () => { cwdListeners.delete(sync) }
+  }, [])
+  return cwd
 }
 
 /** 文件列表缓存:root → files */
@@ -532,7 +594,7 @@ function HeaderAction() {
 }
 
 // ---------- 输入桥(捕获 inputActions) ----------
-function DockBridge(props: { useInput?: (s: unknown) => unknown; inputActions?: { setDraft(d: string): void } }) {
+function DockBridge(props: { useInput?: (s: unknown) => unknown; inputActions?: InputActionsLike }) {
   const input = props.useInput ? (props.useInput((s: unknown) => s) as { draft?: string }) : undefined
   const actions = props.inputActions
   const draftRef = useRef(input?.draft ?? '')
@@ -541,6 +603,9 @@ function DockBridge(props: { useInput?: (s: unknown) => unknown; inputActions?: 
     if (!actions) return
     setBridge({
       insert(text: string) {
+        // 光标插入优先;被拒才退化末尾追加(仍经 setDraft,但基于真实 draft,不丢原文)
+        if (insertAtCaret(actions, text)) return
+        if (typeof actions.setDraft !== 'function') return
         const draft = draftRef.current
         const sep = draft === '' || draft.endsWith('\n') ? '' : '\n'
         actions.setDraft(draft + sep + text)
@@ -613,18 +678,17 @@ function SettingsView() {
 }
 
 // ---------- 右侧面板(顶部 Tab:文件 / 设置) ----------
+// 注意:DSH 0.2 起 slot 传空 props,不再注入 useSessions/useWorkspaces;
+// root/cwd 改经 useEffectiveRoot()/useActiveCwd() 从 cordis 服务订阅。
 function Panel(props: {
-  useWorkspaces: (s: unknown) => unknown
-  useSessions: (s: unknown) => unknown
   onDraggingChange: (v: 'file' | 'dir' | null) => void
   fullscreen: boolean
   onToggleFullscreen: () => void
 }) {
-  const sessions = props.useSessions((s: unknown) => s) as { current?: string; byId?: Record<string, { cwd?: string }> }
-  const currentSummary = sessions.current && sessions.byId ? sessions.byId[sessions.current] : undefined
-  const cwd = currentSummary?.cwd
+  const cwd = useActiveCwd() ?? undefined
 
-  const [root, setRoot] = useState<string | null>(null)
+  const effRoot = useEffectiveRoot()
+  const [root, setRoot] = useState<string | null>(() => effRoot)
   const [dirs, setDirs] = useState<Record<string, { loading: boolean; error: string | null; entries: WsEntry[]; truncated: boolean }>>({})
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [filter, setFilter] = useState('')
@@ -645,10 +709,10 @@ function Panel(props: {
 
   // root 永远跟随会话 cwd(下拉框已删:单工作区是唯一现实场景,多工作区边际收益不抵维护成本)
   useEffect(() => {
-    const cand = cwd ?? null
+    const cand = cwd ?? effRoot
     if (cand !== root) setRoot(cand)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cwd])
+  }, [cwd, effRoot])
 
   const loadDir = useCallback(async (r: string, rel: string) => {
     setDirs((d) => ({ ...d, [rel]: { loading: true, error: null, entries: d[rel]?.entries ?? [], truncated: false } }))
@@ -1207,10 +1271,8 @@ function Panel(props: {
 }
 
 // ---------- 弹窗根:浮动面板,位于顶部 header 与输入框之间,带展开/收起动画 ----------
-function DrawerRoot(props: {
-  useWorkspaces: (s: unknown) => unknown
-  useSessions: (s: unknown) => unknown
-}) {
+// 注意:同 Panel,DSH 0.2 起 slot 传空 props,此处不再声明/透传 use* 注入。
+function DrawerRoot() {
   const [on, setOn] = useState(getOpen())
   const [shown, setShown] = useState(getOpen())
   const [closing, setClosing] = useState(false)
@@ -1449,7 +1511,7 @@ function DrawerRoot(props: {
   return (
     <div className={C('dshwe-layer')}>
       {dragKind !== null ? <div className={C('dshwe-hint')}><div className={C('dshwe-hint-chip')}><svg viewBox="0 0 16 16" width={16} height={16} aria-hidden="true"><path d="M8 3.5v6M5.7 7.2L8 9.5l2.3-2.3M3.5 12.5h9" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" /></svg>{dragKind === 'dir' ? tr('drop.hint.dir') : tr('drop.hint')}</div></div> : null}
-      {on || closing ? <div data-dshwe-popup="" className={C('dshwe-popup') + (shown ? ` ${C('dshwe-popup-on')}` : '') + (fullscreen ? ` ${C('dshwe-popup-full')}` : '')} style={fullscreen ? { top: fullRect.top, left: fullRect.left, width: fullRect.width, height: fullRect.height } as React.CSSProperties : { top: rect.top, height: popupH, width: popupW, '--dshwe-base-w': `${popupW}px` } as React.CSSProperties}><Panel {...props} onDraggingChange={setDragKind} fullscreen={fullscreen} onToggleFullscreen={toggleFullscreen} /><div className={C('dshwe-resize-corner')} onMouseDown={onResizeDown} onTouchStart={onResizeTouchStart} onDoubleClick={onResizeReset} title={tr('resize.tip')} role="separator" aria-orientation="horizontal" aria-label={tr('resize.tip')}><span className={C('dshwe-resize-corner-bar')} /></div></div> : null}
+      {on || closing ? <div data-dshwe-popup="" className={C('dshwe-popup') + (shown ? ` ${C('dshwe-popup-on')}` : '') + (fullscreen ? ` ${C('dshwe-popup-full')}` : '')} style={fullscreen ? { top: fullRect.top, left: fullRect.left, width: fullRect.width, height: fullRect.height } as React.CSSProperties : { top: rect.top, height: popupH, width: popupW, '--dshwe-base-w': `${popupW}px` } as React.CSSProperties}><Panel onDraggingChange={setDragKind} fullscreen={fullscreen} onToggleFullscreen={toggleFullscreen} /><div className={C('dshwe-resize-corner')} onMouseDown={onResizeDown} onTouchStart={onResizeTouchStart} onDoubleClick={onResizeReset} title={tr('resize.tip')} role="separator" aria-orientation="horizontal" aria-label={tr('resize.tip')}><span className={C('dshwe-resize-corner-bar')} /></div></div> : null}
     </div>
   )
 }
@@ -1499,21 +1561,29 @@ export function apply(ctx: CtxLike): void {
 
   // ---------- 自动推导工作区根目录(面板未打开时,从 sessions 服务获取 cwd) ----------
   // 这样 @ 触发源即使面板未打开也能搜索文件
+  // 注意(DSH 0.2 起):SessionListState 已无 `current` 字段(选择态在 Controller 之外);
+  // 当前会话取主视图 retain 的行(retainedBy.mainView > 0,官方同款写法),退化取 ids[0]。
   try {
     ctx.inject(['sessions'], (scope) => {
-      const sessions = (scope as unknown as { sessions?: { list: { subscribe: (fn: () => void) => () => void; getSnapshot: () => { current?: string; byId?: Record<string, { cwd?: string }> } } } }).sessions
+      const sessions = (scope as unknown as { sessions?: { list: { subscribe: (fn: () => void) => () => void; getSnapshot: () => { ids?: string[]; byId?: Record<string, { cwd?: string; retainedBy?: { mainView?: number } }> } } } }).sessions
       if (sessions === undefined) return
       const update = (): void => {
-        const snap = sessions.list.getSnapshot()
-        const currentId = snap.current
-        const currentSummary = currentId && snap.byId ? snap.byId[currentId] : undefined
-        const cwd = currentSummary?.cwd ?? null
-        activeCwd = cwd
+        let snap
+        try { snap = sessions.list.getSnapshot() }
+        catch { return }
+        const rows = snap.byId ? Object.values(snap.byId) : []
+        const main = rows.find((r) => (((r.retainedBy as { mainView?: number } | undefined)?.mainView) ?? 0) > 0)
+        const firstId = snap.ids && snap.ids.length > 0 ? snap.ids[0] : undefined
+        const cwd = main?.cwd ?? (firstId !== undefined && snap.byId !== undefined ? snap.byId[firstId]?.cwd : undefined) ?? rows[0]?.cwd ?? null
+        setActiveCwd(cwd)
         // 只在面板未主动设置根目录时使用 sessions cwd 作为 fallback
         if (activeWorkspaceRoot === null) {
-          sessionsCwdRoot = cwd
-          if (cwd !== null) {
-            console.info('[dsh-workspace-explorer] auto-discovered workspace root from session:', cwd)
+          if (sessionsCwdRoot !== cwd) {
+            sessionsCwdRoot = cwd
+            if (cwd !== null) {
+              console.info('[dsh-workspace-explorer] auto-discovered workspace root from session:', cwd)
+            }
+            emitRoot()
           }
         }
       }
@@ -1528,32 +1598,40 @@ export function apply(ctx: CtxLike): void {
   // DockBridge 可能未挂载(会话未激活或 dock 槽位未渲染),这里作为 fallback
   try {
     ctx.inject(['sessions', 'conversation'], (scope) => {
-      const sessions = (scope as unknown as { sessions?: { list: { subscribe: (fn: () => void) => () => void; getSnapshot: () => { current?: string } }; scope: (id: string) => unknown } }).sessions
-      const conversation = (scope as unknown as { conversation?: { input: { for: (scope: unknown) => { actions?: { setDraft(text: string): void } } } } }).conversation
+      const sessions = (scope as unknown as { sessions?: { list: { subscribe: (fn: () => void) => () => void; getSnapshot: () => { ids?: string[]; byId?: Record<string, { retainedBy?: { mainView?: number } }> } }; scope: (id: string) => unknown } }).sessions
+      const conversation = (scope as unknown as { conversation?: { input: { for: (scope: unknown) => { actions?: InputActionsLike } } } }).conversation
       if (sessions === undefined || conversation === undefined) return
       const update = (): void => {
         const snap = sessions.list.getSnapshot()
-        const currentId = snap.current
+        const rows = snap.byId ? Object.values(snap.byId) : []
+        const mainRow = rows.find((r) => (((r.retainedBy as { mainView?: number } | undefined)?.mainView) ?? 0) > 0)
+        const mainId = (Object.keys(snap.byId ?? {}).find((id) => snap.byId?.[id] === mainRow)) ?? (snap.ids && snap.ids.length > 0 ? snap.ids[0] : undefined)
+        const currentId = mainId
         if (!currentId) return
         try {
           const actx = sessions.scope(currentId)
           if (actx === undefined) return
           const inputFace = conversation.input.for(actx)
           const inputActions = inputFace?.actions
-          if (inputActions && typeof inputActions.setDraft === 'function') {
+          if (inputActions && (typeof inputActions.insertText === 'function' || typeof inputActions.setDraft === 'function')) {
             // 只在 bridge 未设置时更新(DockBridge 优先)
-            if (bridge === null) {
-              setBridge({
-                insert(text: string) {
-                  // 获取当前 draft(通过 DOM 读取或 input face)
-                  const textarea = document.querySelector('[data-composer-card] textarea') as HTMLTextAreaElement | null
-                  const draft = textarea?.value ?? ''
-                  const sep = draft === '' || draft.endsWith('\n') ? '' : '\n'
-                  inputActions.setDraft(draft + sep + text)
-                },
-              })
-              console.info('[dsh-workspace-explorer] bridge set via conversation.input fallback')
-            }
+            // 注意:会话切换后 actions 身份会变,需刷新 bridge 闭包,否则插到旧会话 ——
+            // 因此每次 update 都重设(以当前会话的 actions 为准)。
+            setBridge({
+              insert(text: string) {
+                // 1) 光标插入(官方契约,不碰原文其余部分)
+                if (insertAtCaret(inputActions, text)) return
+                // 2) 退化:基于 input face 当前 draft 做末尾追加(不再读 DOM,旧选择器在新壳不存在)
+                if (typeof inputActions.setDraft !== 'function') return
+                let draft = ''
+                try {
+                  const st = (inputFace as unknown as { state?: { getSnapshot: () => { draft?: string } } }).state?.getSnapshot()
+                  draft = typeof st?.draft === 'string' ? st.draft : ''
+                } catch { draft = '' }
+                const sep = draft === '' || draft.endsWith('\n') ? '' : '\n'
+                inputActions.setDraft(draft + sep + text)
+              },
+            })
           }
         } catch {
           // session scope 不可用时忽略
@@ -1637,11 +1715,13 @@ export function apply(ctx: CtxLike): void {
   ))
   slots.inject('shell.overlay', () => slots.register(
     { name: 'shell.overlay', id: 'workspace-explorer-panel' },
-    (props: never) => <DrawerRoot {...(props as { useWorkspaces: (s: unknown) => unknown; useSessions: (s: unknown) => unknown })} />,
+    // DSH 0.2 起 slot 传空 props;root 改经 cordis sessions 服务订阅,不再经 props 注入
+    () => <DrawerRoot />,
   ))
   slots.inject('conversation.input.dock', () => slots.register(
     { name: 'conversation.input.dock', id: 'workspace-explorer-bridge' },
-    (props: never) => <DockBridge {...(props as { useInput?: (s: unknown) => unknown; inputActions?: { setDraft(d: string): void } })} />,
+    // 同上:DockBridge 自带无 props 防护 + apply 内 conversation.input fallback
+    () => <DockBridge />,
   ))
   slots.inject('settings.section', () => slots.register(
     { name: 'settings.section', id: 'workspace-explorer', order: 30, label: () => tr('settings.nav') },

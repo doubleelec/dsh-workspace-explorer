@@ -1,6 +1,11 @@
 # Changelog
 
-## [0.10.0] - 2026-09-23
+## [0.10.1] - 2026-10-09
+
+### 修复 Fix
+
+- **兼容 DSH 0.2.0-rc.2** — 新版 `shell.overlay` / `conversation.session.header.utilities` 等 slot 改传空 props,旧的 `props.useSessions` 注入调用即崩溃(面板空白、看不到工作区文件);改为经 cordis `sessions` 服务订阅 root/cwd(`useEffectiveRoot` / `useActiveCwd`),slot 注册不再透传 props;另修复自动发现根目录:新版 `SessionListState` 已无 `current` 字段,改取主视图 retain 行(`retainedBy.mainView > 0`)的 cwd,退化取 `ids[0]`;Host 半区(`/dsh-we/api/*`)未动 / **DSH 0.2 compat** — slots now pass empty props, so the panel reads root/cwd from the `sessions` service instead of slot-injected hooks; auto-discovery follows the `mainView`-retained session row since the snapshot no longer carries `current`; host routes unchanged.
+- **发送到输入框改为光标插入** — 以前经 `setDraft` 整文替换,输入框原文被清空(且旧 DOM 选择器在新壳读不到 draft,直接丢字);现优先用官方 `captureInsertion` + `insertText` 插到光标处(带 draftRev CAS,并发编辑被拒则退化为基于真实 draft 的末尾追加),原文完好 / **Insert at caret** — file references now splice at the editor caret via `captureInsertion`/`insertText` instead of replacing the whole draft; falls back to appending to the live draft.
 
 ### 新功能 Feature
 
