@@ -1,0 +1,8 @@
+[module]
+name = "assets/screenshots"
+description = "Screenshots illustrating the explorer interface and workflows."
+submodules = []
+
+[public_api]
+exposed = []
+reason = "Image assets are referenced by project documentation rather than code."

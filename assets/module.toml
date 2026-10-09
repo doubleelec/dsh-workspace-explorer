@@ -1,0 +1,8 @@
+[module]
+name = "assets"
+description = "Project screenshots and visual assets."
+submodules = ["screenshots"]
+
+[public_api]
+exposed = []
+reason = "Static visual assets are consumed by documentation and are not code exports."

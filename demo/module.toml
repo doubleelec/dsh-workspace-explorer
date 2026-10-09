@@ -1,0 +1,8 @@
+[module]
+name = "demo"
+description = "Standalone interactive demo and recorded preview."
+submodules = []
+
+[public_api]
+exposed = []
+reason = "The demo is a documentation aid and does not expose importable code."

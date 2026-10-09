@@ -1,0 +1,14 @@
+# Root architecture registry for dsh-workspace-explorer.
+# The compatibility host remains a distinct module from the active native plugin.
+submodules = ["src", "assets", "demo", ".github", "compat"]
+
+[module.src]
+description = "TypeScript source for the active native host and browser client."
+[module.assets]
+description = "Project screenshots and visual assets."
+[module.demo]
+description = "Standalone interactive demo and recorded preview."
+[module.".github"]
+description = "GitHub Actions workflows for Pages and package publishing."
+[module.compat]
+description = "Legacy composition-mounted host compatibility entry."

@@ -1,0 +1,8 @@
+[module]
+name = "compat"
+description = "Legacy composition-mounted host compatibility entry."
+submodules = []
+
+[public_api]
+exposed = []
+reason = "The compatibility entry provides a legacy default plugin mount rather than a shared facade."

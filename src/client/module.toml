@@ -1,0 +1,8 @@
+[module]
+name = "src/client"
+description = "Browser-side workspace explorer UI, previews, state, and presentation helpers."
+submodules = []
+
+[public_api]
+exposed = []
+reason = "The plugin client is activated through the injected runtime apply entry; helper modules are internal implementation."

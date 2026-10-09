@@ -1,0 +1,8 @@
+[module]
+name = ".github/workflows"
+description = "Automated Pages deployment and npm publication workflows."
+submodules = []
+
+[public_api]
+exposed = []
+reason = "Workflow definitions are executed by GitHub Actions and are not application exports."

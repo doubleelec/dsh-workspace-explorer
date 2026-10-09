@@ -1,0 +1,8 @@
+[module]
+name = ".github"
+description = "GitHub Actions workflows for Pages and package publishing."
+submodules = ["workflows"]
+
+[public_api]
+exposed = []
+reason = "Repository automation configuration has no application import API."

@@ -1,0 +1,13 @@
+[module]
+name = "src"
+description = "TypeScript source for the active native host and browser client."
+submodules = ["client"]
+
+[public_api]
+exposed = []
+reason = "The plugin runtime resolves host and client entrypoints through package metadata; the source tree has no facade export list."
+
+[submodule.client]
+external_depends = ["react", "@deepseek-ai/dsh-client-ui-input-trigger/client"]
+internal_depends = ["format", "markdown", "mermaid", "popupLayout", "previewState", "html", "panel.module.css", "../../package.json"]
+

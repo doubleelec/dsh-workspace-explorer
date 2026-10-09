@@ -1,0 +1,4 @@
+# Keep vendored Architecture Kit governance tests byte-identical to skill
+# templates (LF). arch_engine.py check compares raw bytes, so CRLF
+# reintroduction would resurface drift warnings.
+tests/governance/*.py text eol=lf
