@@ -32,7 +32,16 @@ jobs:
       - name: Trust wechat host key
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -t ed25519 git.weixin.qq.com >> ~/.ssh/known_hosts
+          chmod 700 ~/.ssh
+          ssh-keyscan git.weixin.qq.com >> ~/.ssh/known_hosts
+          # 微信侧 host key 仍是 ssh-rsa，现代 OpenSSH 默认拒收，这里显式放行；
+          # 用户密钥若用 ed25519 则不受影响，用 RSA 老钥也一并兼容
+          {
+            echo "Host git.weixin.qq.com"
+            echo "  HostkeyAlgorithms +ssh-rsa"
+            echo "  PubkeyAcceptedAlgorithms +ssh-rsa"
+          } >> ~/.ssh/config
+          chmod 600 ~/.ssh/config ~/.ssh/known_hosts
 
       - name: Add wechat remote and push
         run: |
