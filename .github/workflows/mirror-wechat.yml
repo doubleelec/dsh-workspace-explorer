@@ -1,0 +1,36 @@
+name: Mirror to WeChat git
+
+# GitHub 为主力,微信代码平台只做冷备镜像。
+# push 到 main 即自动同步过去;微信远端需在 repo secrets 配 WECHAT_MIRROR_KEY(微信 SSH 私钥)。
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wechat-mirror
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history + tags)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.WECHAT_MIRROR_KEY }}
+
+      - name: Add wechat remote and push
+        run: |
+          git remote add wechat "git@git.weixin.qq.com:doubleelec/dsh-workspace-explorer.git" 2>/dev/null || \
+            git remote set-url wechat "git@git.weixin.qq.com:doubleelec/dsh-workspace-explorer.git"
+          git push wechat refs/heads/main:refs/heads/main --tags --prune --force-with-lease
