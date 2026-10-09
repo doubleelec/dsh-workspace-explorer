@@ -94,7 +94,11 @@ function writeJson(res: WsHttpResponse, value: unknown, status = 200): void {
 /** @internal 把「工作区根目录 + 相对路径」解析为绝对路径,并校验 rel 不含危险段。 */
 export function resolveRel(root: string, rel: string): { abs: string } | { error: string } {
   if (root === '') return { error: 'missing-root' }
+  // Windows 分隔符:反斜杠段可绕过 '/' 切分,使 '..' 在 OS 层逃逸根目录,必须拒绝。
+  // root 本身允许盘符/反斜杠形态(Windows 工作区根即如此);rel 经字符串拼接寻址,
+  // 盘符形 rel(如 'C:/x')仍落在根内,不构成逃逸,无需误伤。
   if (rel !== '') {
+    if (rel.includes('\\')) return { error: 'bad-rel' }
     const segs = rel.split('/')
     if (segs.some((s) => s === '' || s === '.' || s === '..')) return { error: 'bad-rel' }
   }

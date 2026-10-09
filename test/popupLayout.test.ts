@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { autoPopupHeight, clampPopupHeight, clampPopupWidth, loadManualHeight, loadManualWidth, saveManualHeight, saveManualWidth } from '../src/client/popupLayout'
+import { autoPopupHeight, clampPopupHeight, clampPopupWidth, clampStoredHeight, clampStoredWidth, loadManualHeight, loadManualWidth, saveManualHeight, saveManualWidth } from '../src/client/popupLayout'
 
 describe('autoPopupHeight', () => {
   it('uses the measured space when it fits', () => {
@@ -52,5 +52,23 @@ describe('manual width storage', () => {
     expect(loadManualWidth()).toBe(null)
     expect(() => saveManualWidth(400)).not.toThrow()
     expect(() => saveManualWidth(null)).not.toThrow()
+  })
+})
+
+describe('clampStoredHeight/clampStoredWidth', () => {
+  it('passes null through (falls back to auto/preset size)', () => {
+    expect(clampStoredHeight(null, 100, 800)).toBe(null)
+    expect(clampStoredWidth(null, 1280)).toBe(null)
+  })
+
+  it('clamps a stale oversized value into the current viewport', () => {
+    // 旧值来自大显示器,当前视口只能容纳 684 高 / 1248 宽
+    expect(clampStoredHeight(2000, 100, 800)).toBe(684)
+    expect(clampStoredWidth(2000, 1280)).toBe(1248)
+  })
+
+  it('keeps an in-range stored value intact', () => {
+    expect(clampStoredHeight(500, 100, 800)).toBe(500)
+    expect(clampStoredWidth(400, 1280)).toBe(400)
   })
 })

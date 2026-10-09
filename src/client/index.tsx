@@ -13,7 +13,7 @@ import { basename, extOf, fmtSize, formatTreeBlock, visibleEntries } from './for
 import { isMarkdownFile, parseMarkdown } from './markdown'
 import type { MdInline, MdNode } from './markdown'
 import { isMermaidLang, loadMermaid } from './mermaid'
-import { autoPopupHeight, clampPopupHeight, clampPopupWidth, loadManualHeight, loadManualWidth, saveManualHeight, saveManualWidth } from './popupLayout'
+import { autoPopupHeight, clampPopupHeight, clampPopupWidth, clampStoredHeight, clampStoredWidth, loadManualHeight, loadManualWidth, saveManualHeight, saveManualWidth } from './popupLayout'
 import pkg from '../../package.json'
 import { clearSavedPreview, getSavedHtmlView, getSavedMdView, getSavedPreview, getSavedTab, saveHtmlView, saveMdView, savePreviewRef, savePreviewTab, shouldRestorePreview } from './previewState'
 import { isHtmlFile } from './html'
@@ -348,9 +348,12 @@ const closeDrawer = (): void => { setOpen(false) }
 // 根因:高度 = composer 顶部 − header 底部 − 16,输入框多行变高、手机键盘弹起
 // (visualViewport 缩小)、会话切换后旧监听没更新都会让它变矮;旧下限 200 被
 // 头部+搜索框(~150px)吃完就只剩几行。数学部分抽到 popupLayout.ts 做单测。
+// ---------- 视口高度:移动端键盘弹起时 visualViewport.height 缩小,innerHeight 不变——取小者 ----------
+const viewportHeight = (): number => Math.min(window.innerHeight, window.visualViewport?.height ?? window.innerHeight)
+
 const measurePopup = (): { top: number; height: number } => {
   // 移动端键盘弹起时 visualViewport.height 缩小,innerHeight 不变——取小者
-  const vh = Math.min(window.innerHeight, window.visualViewport?.height ?? window.innerHeight)
+  const vh = viewportHeight()
   const header = queryHeader()
   const composer = queryComposer()
   const hr = rectOf(header)
@@ -369,7 +372,7 @@ const measurePopup = (): { top: number; height: number } => {
 // 上 = 固定 0(顶满视口,工具栏全盖住;纵向空间全给文件预览,关弹窗再用工具栏);
 // 下 = 视口底往上固定预留(输入框恒 ~92 高,留 132 稳露出来;不量输入框,DSH 升级改 DOM 也不怕)。
 const measureFullscreen = (): { top: number; left: number; width: number; height: number } => {
-  const vh = Math.min(window.innerHeight, window.visualViewport?.height ?? window.innerHeight)
+  const vh = viewportHeight()
   const vw = window.innerWidth
   const header = queryHeader()
   const composer = queryComposer()
@@ -1385,7 +1388,7 @@ function DrawerRoot() {
       st.moved = true
       if (st.wasFullscreen) setFullscreen(false)
     }
-    const vh = Math.min(window.innerHeight, window.visualViewport?.height ?? window.innerHeight)
+    const vh = viewportHeight()
     const w = clampPopupWidth(st.startW - (clientX - st.startX), window.innerWidth)
     const h = clampPopupHeight(st.startH + (clientY - st.startY), rectRef.current.top, vh)
     st.curW = w
@@ -1434,8 +1437,8 @@ function DrawerRoot() {
     if (fullscreenRef.current) setFullscreen(false)
     setManualH(null); saveManualHeight(null); setManualW(null); saveManualWidth(null); setRect(measurePopup())
   }
-  const popupH = manualH ?? rect.height
-  const popupW = manualW ?? c.width
+  const popupH = clampStoredHeight(manualH, rect.top, viewportHeight()) ?? rect.height
+  const popupW = clampStoredWidth(manualW, window.innerWidth) ?? c.width
   useEffect(() => {
     const hasMarker = (e: DragEvent): boolean => !!e.dataTransfer && Array.from(e.dataTransfer.types ?? []).includes(MARKER)
     const readPayload = (e: DragEvent): { root?: string; rel?: string; name?: string; type?: string } | null => {

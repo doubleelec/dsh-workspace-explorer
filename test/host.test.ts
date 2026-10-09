@@ -36,6 +36,16 @@ describe('resolveRel', () => {
     expect(resolveRel('/ws', './a')).toEqual({ error: 'bad-rel' })
   })
 
+  it('rejects Windows backslash separators', () => {
+    expect(resolveRel('/ws', '..\\x')).toEqual({ error: 'bad-rel' })
+    expect(resolveRel('/ws', 'a\\..\\b')).toEqual({ error: 'bad-rel' })
+    expect(resolveRel('C:\\ws', '..\\x')).toEqual({ error: 'bad-rel' })
+  })
+
+  it('accepts a Windows-style root with a safe rel', () => {
+    expect(resolveRel('C:\\ws', 'a/b.ts')).toEqual({ abs: 'C:\\ws/a/b.ts' })
+  })
+
   it('resolves a normal relative path inside the root', () => {
     expect(resolveRel('/ws', 'a/b.ts')).toEqual({ abs: '/ws/a/b.ts' })
   })

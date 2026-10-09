@@ -100,3 +100,16 @@ export function saveManualWidth(w: number | null, key = POPUP_MANUAL_W_KEY): voi
     /* 存储不可用时忽略,设置页宽度兜底 */
   }
 }
+
+/**
+ * 渲染时钳制已存的手动尺寸:localStorage 的旧值可能来自更大的视口,
+ * 直接使用会溢出当前窗口。null 保持 null(回落自动高度/设置宽度)。
+ */
+export function clampStoredHeight(h: number | null, top: number, vh: number): number | null {
+  return h == null ? null : clampPopupHeight(h, top, vh)
+}
+
+/** 渲染时钳制已存的手动宽度,逻辑同上。 */
+export function clampStoredWidth(w: number | null, vw: number): number | null {
+  return w == null ? null : clampPopupWidth(w, vw)
+}

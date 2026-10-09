@@ -47,3 +47,10 @@ export declare function loadManualWidth(key?: string): number | null;
  * 写手动宽度:null 清除(恢复设置页宽度);存储不可用时静默忽略。
  */
 export declare function saveManualWidth(w: number | null, key?: string): void;
+/**
+ * 渲染时钳制已存的手动尺寸:localStorage 的旧值可能来自更大的视口,
+ * 直接使用会溢出当前窗口。null 保持 null(回落自动高度/设置宽度)。
+ */
+export declare function clampStoredHeight(h: number | null, top: number, vh: number): number | null;
+/** 渲染时钳制已存的手动宽度,逻辑同上。 */
+export declare function clampStoredWidth(w: number | null, vw: number): number | null;
