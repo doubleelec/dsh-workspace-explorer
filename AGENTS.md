@@ -8,4 +8,4 @@ Examples: `fix(tree): preserve expanded folders` or `docs: clarify install steps
 
 ## Git remotes
 
-Two remotes: `origin` (https://github.com/doubleelec/dsh-workspace-explorer.git, public) and `wechat` (git@git.weixin.qq.com:doubleelec/dsh-workspace-explorer.git, cold backup). Push to both remotes every time: `origin` first, then `git push wechat main`.
+Two remotes: `origin` (git@github.com:doubleelec/dsh-workspace-explorer.git, public) and `wechat` (git@git.weixin.qq.com:doubleelec/dsh-workspace-explorer.git, cold backup). Push to both remotes every time: `origin` first, then `git push wechat main`.
