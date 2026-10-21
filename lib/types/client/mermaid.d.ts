@@ -14,8 +14,23 @@ interface MermaidApi {
     render(id: string, text: string): Promise<{
         svg: string;
     }>;
+    run(cfg: {
+        nodes: Iterable<Element> | ArrayLike<Element>;
+    }): Promise<void>;
 }
-/** 懒加载 mermaid(首选 jsdelivr,失败回落 unpkg),并完成一次性 initialize。 */
+/** 面板字体(与 panel.module.css .dshwe-popup 的 font 一致)。 */
+export declare const MERMAID_FONT_FAMILY = "-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, Microsoft YaHei, sans-serif";
+/**
+ * 统一的 mermaid 初始化配置(纯函数,可单测)。
+ *
+ * 方块纵向偏窄的根因:离屏 `render()` 测量与面板展示不是同一字体上下文
+ * (行高/字宽估算偏小,节点 rect 按矮高度绘制)。对策:
+ * - flowchart.textHeight 加大行盒,给 CJK 两行字留余量;
+ * - fontFamily 与面板字体一致,消除测量/展示偏差;
+ * - htmlLabels 开启(foreignObject 按真实 DOM 排版,不依赖估算);
+ * - useMaxWidth: false,宽度由容器 `.dshwe-mm-svg` 的 max-width 控制。
+ */
+export declare function buildMermaidInitConfig(theme: string): Record<string, unknown>;
 export declare function loadMermaid(): Promise<MermaidApi>;
 /** 测试/调试用:清空单例(生产代码勿调)。 */
 export declare function __resetMermaidCacheForTest(): void;

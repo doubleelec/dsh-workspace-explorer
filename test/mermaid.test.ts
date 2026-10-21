@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isMermaidLang, MERMAID_CDN_URLS, __resetMermaidCacheForTest } from '../src/client/mermaid'
+import { buildMermaidInitConfig, isMermaidLang, MERMAID_CDN_URLS, __resetMermaidCacheForTest } from '../src/client/mermaid'
 
 describe('isMermaidLang', () => {
   it('matches mermaid case-insensitively', () => {
@@ -20,5 +20,14 @@ describe('mermaid CDN config', () => {
     expect(MERMAID_CDN_URLS.length).toBeGreaterThanOrEqual(2)
     expect(MERMAID_CDN_URLS[0]).toContain('mermaid')
     __resetMermaidCacheForTest()
+  })
+})
+
+describe('buildMermaidInitConfig', () => {
+  it('enables htmlLabels with panel font so measure matches display', () => {
+    const cfg = buildMermaidInitConfig('dark') as { flowchart: { htmlLabels: boolean; useMaxWidth: boolean }; fontFamily: string }
+    expect(cfg.flowchart.htmlLabels).toBe(true)
+    expect(cfg.flowchart.useMaxWidth).toBe(false)
+    expect(cfg.fontFamily).toContain('PingFang SC')
   })
 })

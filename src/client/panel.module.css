@@ -194,6 +194,7 @@
 .dshwe-mm-bar .dshwe-md-lang { position: static; }
 .dshwe-mm-svg { padding: 4px 10px 10px; overflow: auto; display: flex; justify-content: center; }
 .dshwe-mm-svg svg { max-width: 100%; height: auto; }
+.dshwe-mm-svg .mermaid { margin: 0; }
 .dshwe-mm .dshwe-md-pre { margin: 0 10px 10px; }
 .dshwe-md-tablewrap { margin: 8px 0; overflow: auto; border: 1px solid var(--dsw-alias-border-l3, rgba(128,128,128,.2)); border-radius: 10px; }
 .dshwe-md-table { border-collapse: collapse; width: 100%; font-size: 12px; }

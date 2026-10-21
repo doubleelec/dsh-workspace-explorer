@@ -252,25 +252,27 @@ function renderMdInline(nodes: MdInline[], keyPrefix: string): React.ReactNode[]
 // ---------- Mermaid 图表块:点击才从 CDN 懒加载渲染,失败回落源码 ----------
 function MermaidBlock(props: { code: string; idKey: string }) {
   const [state, setState] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle')
-  const [svg, setSvg] = useState('')
   const [errMsg, setErrMsg] = useState('')
   const [showSource, setShowSource] = useState(false)
   const hostRef = useRef<HTMLDivElement | null>(null)
-  const idRef = useRef(`dshwe-mm-${props.idKey.replace(/[^a-zA-Z0-9_-]/g, '')}-${Math.random().toString(36).slice(2)}`)
+  const codeRef = useRef<HTMLDivElement | null>(null)
   const renderNow = (): void => {
     setState('loading')
     setErrMsg('')
+    // 原位渲染(mermaid.run):测量与展示同一字体上下文,离屏 render() 的估算偏差是方块纵向偏窄的根因
     loadMermaid()
-      .then((api) => api.render(idRef.current, props.code))
-      .then(({ svg }) => { setSvg(svg); setShowSource(false); setState('ok') })
+      .then(async (api) => {
+        if (!codeRef.current) throw new Error('mermaid host missing')
+        codeRef.current.removeAttribute('data-processed')
+        codeRef.current.textContent = props.code
+        await api.run({ nodes: [codeRef.current] })
+        setShowSource(false)
+        setState('ok')
+      })
       .catch((err) => { setErrMsg(String((err as Error)?.message ?? err)); setState('error') })
   }
-  // mermaid 输出的 svg 由 mermaid(securityLevel: strict) 负责清洗后注入
-  useEffect(() => {
-    if (state === 'ok' && hostRef.current) hostRef.current.innerHTML = svg
-  }, [state, svg])
   // 切换文件时重置(同一组件复用 idKey 变化即新图表)
-  useEffect(() => { setState('idle'); setSvg(''); setErrMsg(''); setShowSource(false) }, [props.code])
+  useEffect(() => { setState('idle'); setErrMsg(''); setShowSource(false) }, [props.code])
   return (
     <div className={C('dshwe-mm')}>
       <div className={C('dshwe-mm-bar')}>
@@ -288,7 +290,9 @@ function MermaidBlock(props: { code: string; idKey: string }) {
         )}
       </div>
       {state === 'error' ? <div className={C('dshwe-note dshwe-note-err')}>{tr('mermaid.fail')}{errMsg}</div> : null}
-      {state === 'ok' && !showSource ? <div ref={hostRef} className={C('dshwe-mm-svg')} /> : null}
+      <div ref={hostRef} className={C('dshwe-mm-svg')} style={{ display: state === 'ok' && !showSource ? undefined : 'none' }}>
+        <div ref={codeRef} className="mermaid">{props.code}</div>
+      </div>
       {(state === 'idle' || state === 'loading' || state === 'error' || showSource) ? (
         <pre className={C('dshwe-md-pre')}><code>{props.code}</code></pre>
       ) : null}
