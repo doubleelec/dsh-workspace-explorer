@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.10.2] - 2026-10-21
+
+### 修复 Fix
+
+- **Mermaid 首次渲染必失败** — 点「渲染图表」第一次总是 `Could not find a suitable point for the given distance`,重试才好;根因是时序 bug:内容写入后零等待就 `run`,htmlLabels 的 foreignObject 尚未排版,dagre 读到零尺寸,边路由找不到落点;现同步提交 host 可见性(`flushSync`),等字体就绪(`document.fonts.ready`)+两帧排版后再 `run`,另加零尺寸门禁(无尺寸时报可读错误,不再漏出 dagre 原错);冷启动一次走通 / **First mermaid render no longer fails** — the first click always failed with a dagre edge-routing error and only the retry worked; root cause was a timing bug (running before labels were laid out); now flushes host visibility synchronously, waits for fonts plus two frames, and gates on non-zero host size with a readable error.
+- **预览编辑保存后即时刷新** — 保存后渲染视图仍显示旧内容,需手动切换才更新;现保存成功即把新内容写入预览并重计行数 / **Preview refreshes immediately after save** — saved edits now update the rendered view at once instead of showing stale content.
+- **Mermaid 原位渲染** — 离屏 `render()` 的字体度量与面板展示不一致,方块纵向偏窄、两行字第二行被截;改原位 `mermaid.run`,测量与展示同一字体上下文;host 渲染期间保持可见 / **In-place mermaid rendering** — labels are now measured in the same font context they display in, fixing vertically cramped nodes.
+- **安全:拒绝反斜杠路径穿越** — `resolveRel` 拒绝含 `\` 的 rel,堵住 Windows 路径穿越 / **Security: reject backslash traversal** — `resolveRel` rejects `rel` containing backslashes.
+
 ## [0.10.1] - 2026-10-09
 
 ### 修复 Fix
