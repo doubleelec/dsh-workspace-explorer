@@ -7,6 +7,7 @@
  * 浏览器 bundle(src/client/index.tsx → lib/client.js,__ModuleLoader__ 格式)。
  */
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import type { InputTriggerSource } from '@deepseek-ai/dsh-client-ui-input-trigger/client'
 import styles from './panel.module.css'
 import { basename, extOf, fmtSize, formatTreeBlock, visibleEntries } from './format'
@@ -251,27 +252,48 @@ function renderMdInline(nodes: MdInline[], keyPrefix: string): React.ReactNode[]
 }
 // ---------- Mermaid 图表块:点击才从 CDN 懒加载渲染,失败回落源码 ----------
 function MermaidBlock(props: { code: string; idKey: string }) {
-  const [state, setState] = useState<'idle' | 'loading' | 'rendering' | 'ok' | 'error'>('idle')
+  const [state, setState] = useState<'idle' | 'rendering' | 'ok' | 'error'>('idle')
   const [errMsg, setErrMsg] = useState('')
   const [showSource, setShowSource] = useState(false)
   const hostRef = useRef<HTMLDivElement | null>(null)
   const codeRef = useRef<HTMLDivElement | null>(null)
   const renderNow = (): void => {
-    setState('loading')
     setErrMsg('')
-    // 原位渲染(mermaid.run):测量与展示同一字体上下文,离屏 render() 的估算偏差是方块纵向偏窄的根因。
-    // 注意:host 容器必须可见(不能 display:none),否则 dagre 布局测不到尺寸,
-    // 边路由会报 "Could not find a suitable point for the given distance"。
+    // 时序修复:此前先 setState('loading') 再等一帧、写内容后零等待就 run,
+    // htmlLabels 的 foreignObject 尚未排版,dagre 读到零尺寸,边路由报
+    // "Could not find a suitable point for the given distance"——总是第一次失败。
+    // 新顺序:同步提交可见性 → 写内容 → 等字体+两帧排版 → 零尺寸门禁 → run。
+    try {
+      flushSync(() => { setShowSource(false); setState('rendering') })
+    } catch {
+      // flushSync 在并发渲染上下文不可用时回落到普通 setState
+      setShowSource(false)
+      setState('rendering')
+    }
     loadMermaid()
       .then(async (api) => {
         if (!codeRef.current) throw new Error('mermaid host missing')
-        setShowSource(false)
-        setState('rendering')
-        // 等待一帧,让 host 先变为可见布局,run 才能测到真实尺寸
-        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
-        if (!codeRef.current) throw new Error('mermaid host missing')
         codeRef.current.removeAttribute('data-processed')
         codeRef.current.textContent = props.code
+        // CJK 首字 race:等字体就绪再量,否则 label 偏小/为零
+        try {
+          await (document as Document & { fonts?: { ready: Promise<unknown> } }).fonts?.ready
+        } catch { /* 老浏览器无 document.fonts,忽略 */ }
+        // 等两帧,让 foreignObject labels 完成一轮真实排版
+        await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+        if (!codeRef.current) throw new Error('mermaid host missing')
+        // 零尺寸门禁:容器无尺寸时 run 必失败,最多再等 3 帧
+        for (let i = 0; i < 3; i++) {
+          const r = codeRef.current.getBoundingClientRect()
+          if (r.width > 0 && r.height > 0) break
+          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+          if (!codeRef.current) throw new Error('mermaid host missing')
+        }
+        if (!codeRef.current) throw new Error('mermaid host missing')
+        {
+          const r = codeRef.current.getBoundingClientRect()
+          if (r.width <= 0 || r.height <= 0) throw new Error('preview host has no size yet, retry')
+        }
         await api.run({ nodes: [codeRef.current] })
         setState('ok')
       })
@@ -285,7 +307,7 @@ function MermaidBlock(props: { code: string; idKey: string }) {
         <span className={C('dshwe-md-lang')}>mermaid</span>
         {state === 'idle' ? (
           <button type="button" className={C('dshwe-prevbtn')} onClick={renderNow}>{tr('mermaid.render')}</button>
-        ) : state === 'loading' || state === 'rendering' ? (
+        ) : state === 'rendering' ? (
           <span className={C('dshwe-note')}><span className={C('dshwe-spin')} />{tr('mermaid.loading')}</span>
         ) : state === 'ok' ? (
           <button type="button" className={C('dshwe-prevbtn')} onClick={() => setShowSource((v) => !v)}>
@@ -299,7 +321,7 @@ function MermaidBlock(props: { code: string; idKey: string }) {
       <div ref={hostRef} className={C('dshwe-mm-svg')} style={{ display: (state === 'rendering' || state === 'ok') && !showSource ? undefined : 'none' }}>
         <div ref={codeRef} className="mermaid">{props.code}</div>
       </div>
-      {(state === 'idle' || state === 'loading' || state === 'error' || (state === 'ok' && showSource)) ? (
+      {(state === 'idle' || state === 'error' || (state === 'ok' && showSource)) ? (
         <pre className={C('dshwe-md-pre')}><code>{props.code}</code></pre>
       ) : null}
     </div>
