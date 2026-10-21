@@ -251,7 +251,7 @@ function renderMdInline(nodes: MdInline[], keyPrefix: string): React.ReactNode[]
 }
 // ---------- Mermaid 图表块:点击才从 CDN 懒加载渲染,失败回落源码 ----------
 function MermaidBlock(props: { code: string; idKey: string }) {
-  const [state, setState] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle')
+  const [state, setState] = useState<'idle' | 'loading' | 'rendering' | 'ok' | 'error'>('idle')
   const [errMsg, setErrMsg] = useState('')
   const [showSource, setShowSource] = useState(false)
   const hostRef = useRef<HTMLDivElement | null>(null)
@@ -259,14 +259,20 @@ function MermaidBlock(props: { code: string; idKey: string }) {
   const renderNow = (): void => {
     setState('loading')
     setErrMsg('')
-    // 原位渲染(mermaid.run):测量与展示同一字体上下文,离屏 render() 的估算偏差是方块纵向偏窄的根因
+    // 原位渲染(mermaid.run):测量与展示同一字体上下文,离屏 render() 的估算偏差是方块纵向偏窄的根因。
+    // 注意:host 容器必须可见(不能 display:none),否则 dagre 布局测不到尺寸,
+    // 边路由会报 "Could not find a suitable point for the given distance"。
     loadMermaid()
       .then(async (api) => {
+        if (!codeRef.current) throw new Error('mermaid host missing')
+        setShowSource(false)
+        setState('rendering')
+        // 等待一帧,让 host 先变为可见布局,run 才能测到真实尺寸
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
         if (!codeRef.current) throw new Error('mermaid host missing')
         codeRef.current.removeAttribute('data-processed')
         codeRef.current.textContent = props.code
         await api.run({ nodes: [codeRef.current] })
-        setShowSource(false)
         setState('ok')
       })
       .catch((err) => { setErrMsg(String((err as Error)?.message ?? err)); setState('error') })
@@ -279,7 +285,7 @@ function MermaidBlock(props: { code: string; idKey: string }) {
         <span className={C('dshwe-md-lang')}>mermaid</span>
         {state === 'idle' ? (
           <button type="button" className={C('dshwe-prevbtn')} onClick={renderNow}>{tr('mermaid.render')}</button>
-        ) : state === 'loading' ? (
+        ) : state === 'loading' || state === 'rendering' ? (
           <span className={C('dshwe-note')}><span className={C('dshwe-spin')} />{tr('mermaid.loading')}</span>
         ) : state === 'ok' ? (
           <button type="button" className={C('dshwe-prevbtn')} onClick={() => setShowSource((v) => !v)}>
@@ -290,10 +296,10 @@ function MermaidBlock(props: { code: string; idKey: string }) {
         )}
       </div>
       {state === 'error' ? <div className={C('dshwe-note dshwe-note-err')}>{tr('mermaid.fail')}{errMsg}</div> : null}
-      <div ref={hostRef} className={C('dshwe-mm-svg')} style={{ display: state === 'ok' && !showSource ? undefined : 'none' }}>
+      <div ref={hostRef} className={C('dshwe-mm-svg')} style={{ display: (state === 'rendering' || state === 'ok') && !showSource ? undefined : 'none' }}>
         <div ref={codeRef} className="mermaid">{props.code}</div>
       </div>
-      {(state === 'idle' || state === 'loading' || state === 'error' || showSource) ? (
+      {(state === 'idle' || state === 'loading' || state === 'error' || (state === 'ok' && showSource)) ? (
         <pre className={C('dshwe-md-pre')}><code>{props.code}</code></pre>
       ) : null}
     </div>
