@@ -72,9 +72,9 @@ export function buildMermaidInitConfig(theme: string): Record<string, unknown> {
     flowchart: {
       useMaxWidth: false,
       htmlLabels: true,
-      nodeSpacing: 35,
-      rankSpacing: 40,
-      padding: 12,
+      nodeSpacing: 24,
+      rankSpacing: 28,
+      padding: 8,
     },
     themeVariables: {
       fontSize: '13px',

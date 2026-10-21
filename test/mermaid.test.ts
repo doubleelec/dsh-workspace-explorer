@@ -30,4 +30,11 @@ describe('buildMermaidInitConfig', () => {
     expect(cfg.flowchart.useMaxWidth).toBe(false)
     expect(cfg.fontFamily).toContain('PingFang SC')
   })
+
+  it('uses compact panel spacing so stacked nodes fit one screen', () => {
+    const cfg = buildMermaidInitConfig('dark') as { flowchart: { nodeSpacing: number; rankSpacing: number; padding: number } }
+    expect(cfg.flowchart.nodeSpacing).toBeLessThanOrEqual(24)
+    expect(cfg.flowchart.rankSpacing).toBeLessThanOrEqual(28)
+    expect(cfg.flowchart.padding).toBeLessThanOrEqual(8)
+  })
 })
