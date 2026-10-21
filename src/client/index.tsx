@@ -884,10 +884,15 @@ function Panel(props: {
         }
         return
       }
-      // 保存成功:更新 entry.size,切回预览模式
+      // 保存成功:更新 entry.size,用已保存内容刷新预览 data,切回预览模式
       setPreview((prev) => prev ? {
         ...prev, saving: false, saveError: null, dirty: false, mode: 'preview',
         entry: { ...prev.entry, size: res.size ?? prev.entry.size },
+        data: prev.data ? {
+          ...prev.data,
+          content: prev.editContent,
+          lineCount: prev.editContent.length === 0 ? 0 : prev.editContent.split('\n').length,
+        } : prev.data,
       } : prev)
       // 刷新文件树(反映可能的大小变化)
       if (root) void loadDir(root, '')
