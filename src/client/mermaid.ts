@@ -58,10 +58,15 @@ export const MERMAID_FONT_FAMILY =
  *
  * 方块纵向偏窄的根因:离屏 `render()` 测量与面板展示不是同一字体上下文
  * (行高/字宽估算偏小,节点 rect 按矮高度绘制)。对策:
- * - flowchart.textHeight 加大行盒,给 CJK 两行字留余量;
  * - fontFamily 与面板字体一致,消除测量/展示偏差;
  * - htmlLabels 开启(foreignObject 按真实 DOM 排版,不依赖估算);
- * - useMaxWidth: false,宽度由容器 `.dshwe-mm-svg` 的 max-width 控制。
+ * - useMaxWidth: false(根 + flowchart/sequence 各一份,兼容读写位置不同的版本),
+ *   宽度由容器 `.dshwe-mm-svg` 的横向滚动承载,不再把宽图压成小字。
+ *
+ * 时序图偏小的根因:sequence 默认 useMaxWidth:true,输出 svg 宽 100%,
+ * 再被 CSS `.dshwe-mm-svg svg { max-width:100% }` 按窄弹窗二次压小,
+ * 参与者越多字越小。对策:sequence 同样 useMaxWidth:false + 放大字号/间距,
+ * 小图由 CSS `min-width:100%` 拉满窗口,大图横向滚动保字号。
  */
 export function buildMermaidInitConfig(theme: string): Record<string, unknown> {
   return {
@@ -69,6 +74,9 @@ export function buildMermaidInitConfig(theme: string): Record<string, unknown> {
     securityLevel: 'strict',
     theme,
     fontFamily: MERMAID_FONT_FAMILY,
+    // 根级 useMaxWidth:新版 Mermaid 在根读取该标志(老版本读各图分支)
+    useMaxWidth: false,
+    htmlLabels: true,
     flowchart: {
       useMaxWidth: false,
       htmlLabels: true,
@@ -76,8 +84,21 @@ export function buildMermaidInitConfig(theme: string): Record<string, unknown> {
       rankSpacing: 40,
       padding: 12,
     },
+    sequence: {
+      useMaxWidth: false,
+      // 时序图在窄弹窗默认偏小:参与者字号/间距各放大一档(消息字号保持默认 16);
+      // 小图由 CSS min-width 拉满,大图横向滚动保字号
+      actorFontSize: 15,
+      messageFontSize: 16,
+      noteFontSize: 14,
+      actorMargin: 60,
+      messageMargin: 42,
+      actorFontFamily: MERMAID_FONT_FAMILY,
+      messageFontFamily: MERMAID_FONT_FAMILY,
+      noteFontFamily: MERMAID_FONT_FAMILY,
+    },
     themeVariables: {
-      fontSize: '13px',
+      fontSize: '14px',
       fontFamily: MERMAID_FONT_FAMILY,
       lineHeight: '1.45',
     },

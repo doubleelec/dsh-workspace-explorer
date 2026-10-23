@@ -37,4 +37,17 @@ describe('buildMermaidInitConfig', () => {
     expect(cfg.flowchart.rankSpacing).toBe(40)
     expect(cfg.flowchart.padding).toBe(12)
   })
+
+  it('disables useMaxWidth at root and for sequence so timing diagrams keep readable type', () => {
+    const cfg = buildMermaidInitConfig('dark') as {
+      useMaxWidth: boolean
+      sequence: { useMaxWidth: boolean; actorFontSize: number; messageFontSize: number; messageMargin: number }
+    }
+    expect(cfg.useMaxWidth).toBe(false)
+    expect(cfg.sequence.useMaxWidth).toBe(false)
+    // 时序图默认偏小:参与者字放大、间距放宽(消息字号保持默认 16)
+    expect(cfg.sequence.actorFontSize).toBeGreaterThan(14)
+    expect(cfg.sequence.messageFontSize).toBeGreaterThanOrEqual(16)
+    expect(cfg.sequence.messageMargin).toBeGreaterThan(35)
+  })
 })

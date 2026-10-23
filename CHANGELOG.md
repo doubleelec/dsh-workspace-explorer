@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.10.3] - 2026-10-23
+
+### 修复 Fix
+
+- **时序图不再被压成小字** — 两层压小叠加:sequence 分支仍是 `useMaxWidth: true`(svg 宽 100% 按窄弹窗算出小字),又被 CSS `max-width: 100%` 二次压缩;现根 + sequence 双关 `useMaxWidth`,参与者字号 14→15、actor/message 间距放宽,svg 改 `min-width: 100%`(小图拉满窗口,大图横向滚动保字号);附带修掉 flex 居中 + overflow 下超宽图左侧滚不到 / **Sequence diagrams keep readable type** — `useMaxWidth: false` at root and for sequence, larger actor type and spacing, svg stretches to fill small widths and scrolls when wide; also fixes unreachable left edge on overflowed diagrams.
+
 ## [0.10.2] - 2026-10-21
 
 ### 修复 Fix
