@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.10.4] - 2026-10-23
+
+### 改进 Improvement
+
+- **Mermaid 默认看全貌、一键看细节** — 0.10.3 按自然尺寸渲染在窄弹窗里根本看不全;改回 CSS 默认 `max-width: 100%` 等比收进容器看全貌,渲染后工具栏多一个「实际尺寸 / 适应宽度」切换,点一下按自然像素滚动看小字;配置层不再放大字号(撑大自然尺寸只会让适应宽度的缩放更小) / **Mermaid fit/actual-size toggle** — diagrams fit the panel by default with a one-click switch to actual-size scrolling; config no longer inflates type since that only shrinks the fitted scale.
+
 ## [0.10.3] - 2026-10-23
 
 ### 修复 Fix

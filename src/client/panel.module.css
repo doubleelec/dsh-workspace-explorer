@@ -188,16 +188,18 @@
 .dshwe-md-check-on { background: var(--dsw-alias-state-business-primary, #4176e6); border-color: transparent; }
 .dshwe-md-hr { margin: 12px 0; border: 0; border-top: 1px solid var(--dsw-alias-border-l3, rgba(128,128,128,.2)); }
 .dshwe-md-link { color: var(--dsw-alias-state-business-primary, #4176e6); }
-/* ---- Mermaid 图表块(点击才渲染;小图拉满窗口,大图横向滚动保字号) ---- */
+/* ---- Mermaid 图表块(点击才渲染;默认适应宽度看全貌,一键切实际尺寸看细节) ---- */
 .dshwe-mm { margin: 8px 0; border: 1px solid var(--dsw-alias-border-l3, rgba(128,128,128,.2)); border-radius: 10px; background: var(--dsw-alias-bg-layer-1, #222); overflow: hidden; }
 .dshwe-mm-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; }
 .dshwe-mm-bar .dshwe-md-lang { position: static; }
-/* 不再 max-width:100% 压图:svg 保持 mermaid 算出的自然尺寸(文字可读);
-   小图 min-width:100% 拉满容器,大图横向滚动(纵向同理经 overflow:auto)。
-   附带修掉旧 flex 居中 + overflow 的老坑:内容超宽时左侧滚不到。 */
+.dshwe-mm-btns { display: flex; align-items: center; gap: 6px; }
+/* 默认 fit:svg 等比收进容器,纵览全图;字小就点「实际尺寸」 */
 .dshwe-mm-svg { padding: 4px 10px 10px; overflow: auto; }
-.dshwe-mm-svg svg { min-width: 100%; height: auto; display: block; }
+.dshwe-mm-svg svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
 .dshwe-mm-svg .mermaid { margin: 0; }
+/* 实际尺寸:svg 保持 mermaid 算出的自然像素,超宽/超高滚动看;
+   不用 flex 居中,超宽时左侧可达。 */
+.dshwe-mm-full .dshwe-mm-svg svg { max-width: none; margin: 0; }
 .dshwe-mm .dshwe-md-pre { margin: 0 10px 10px; }
 .dshwe-md-tablewrap { margin: 8px 0; overflow: auto; border: 1px solid var(--dsw-alias-border-l3, rgba(128,128,128,.2)); border-radius: 10px; }
 .dshwe-md-table { border-collapse: collapse; width: 100%; font-size: 12px; }

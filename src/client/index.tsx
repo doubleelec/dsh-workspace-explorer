@@ -62,7 +62,7 @@ const DICTS: Record<string, Record<string, string>> = {
     'html.source': '源码', 'html.rendered': '渲染',
     'html.source.tip': '查看 HTML 源码', 'html.rendered.tip': '查看渲染效果',
     'mermaid.render': '渲染图表', 'mermaid.loading': '图表加载中…',
-    'mermaid.source': '看源码', 'mermaid.diagram': '看图表',
+    'mermaid.source': '看源码', 'mermaid.diagram': '看图表', 'mermaid.fit': '适应宽度', 'mermaid.full': '实际尺寸',
     'mermaid.retry': '重试', 'mermaid.fail': '图表渲染失败: ',
     'preview.empty': '还没有预览。点击任意文件行，即可在这里查看。',
     'resize.tip': '左下角拖拽调整大小，双击恢复自动',
@@ -103,7 +103,7 @@ const DICTS: Record<string, Record<string, string>> = {
     'html.source': 'Source', 'html.rendered': 'Rendered',
     'html.source.tip': 'View HTML source', 'html.rendered.tip': 'View rendered output',
     'mermaid.render': 'Render diagram', 'mermaid.loading': 'Loading diagram…',
-    'mermaid.source': 'Source', 'mermaid.diagram': 'Diagram',
+    'mermaid.source': 'Source', 'mermaid.diagram': 'Diagram', 'mermaid.fit': 'Fit width', 'mermaid.full': 'Actual size',
     'mermaid.retry': 'Retry', 'mermaid.fail': 'Diagram render failed: ',
     'preview.empty': 'No preview yet. Click any file row to view it here.',
     'resize.tip': 'Drag from the corner to resize, double-click to reset',
@@ -255,6 +255,8 @@ function MermaidBlock(props: { code: string; idKey: string }) {
   const [state, setState] = useState<'idle' | 'rendering' | 'ok' | 'error'>('idle')
   const [errMsg, setErrMsg] = useState('')
   const [showSource, setShowSource] = useState(false)
+  // 默认 fit 看全貌;字小就点「实际尺寸」滚动看细节(记忆在组件内,切图重置)
+  const [fullSize, setFullSize] = useState(false)
   const hostRef = useRef<HTMLDivElement | null>(null)
   const codeRef = useRef<HTMLDivElement | null>(null)
   const renderNow = (): void => {
@@ -300,9 +302,9 @@ function MermaidBlock(props: { code: string; idKey: string }) {
       .catch((err) => { setErrMsg(String((err as Error)?.message ?? err)); setState('error') })
   }
   // 切换文件时重置(同一组件复用 idKey 变化即新图表)
-  useEffect(() => { setState('idle'); setErrMsg(''); setShowSource(false) }, [props.code])
+  useEffect(() => { setState('idle'); setErrMsg(''); setShowSource(false); setFullSize(false) }, [props.code])
   return (
-    <div className={C('dshwe-mm')}>
+    <div className={C('dshwe-mm') + (fullSize ? ` ${C('dshwe-mm-full')}` : '')}>
       <div className={C('dshwe-mm-bar')}>
         <span className={C('dshwe-md-lang')}>mermaid</span>
         {state === 'idle' ? (
@@ -310,9 +312,14 @@ function MermaidBlock(props: { code: string; idKey: string }) {
         ) : state === 'rendering' ? (
           <span className={C('dshwe-note')}><span className={C('dshwe-spin')} />{tr('mermaid.loading')}</span>
         ) : state === 'ok' ? (
-          <button type="button" className={C('dshwe-prevbtn')} onClick={() => setShowSource((v) => !v)}>
-            {showSource ? tr('mermaid.diagram') : tr('mermaid.source')}
-          </button>
+          <span className={C('dshwe-mm-btns')}>
+            <button type="button" className={C('dshwe-prevbtn') + (fullSize ? ` ${C('dshwe-prevbtn-on')}` : '')} onClick={() => setFullSize((v) => !v)}>
+              {fullSize ? tr('mermaid.fit') : tr('mermaid.full')}
+            </button>
+            <button type="button" className={C('dshwe-prevbtn')} onClick={() => setShowSource((v) => !v)}>
+              {showSource ? tr('mermaid.diagram') : tr('mermaid.source')}
+            </button>
+          </span>
         ) : (
           <button type="button" className={C('dshwe-prevbtn')} onClick={renderNow}>{tr('mermaid.retry')}</button>
         )}

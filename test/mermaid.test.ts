@@ -38,16 +38,17 @@ describe('buildMermaidInitConfig', () => {
     expect(cfg.flowchart.padding).toBe(12)
   })
 
-  it('disables useMaxWidth at root and for sequence so timing diagrams keep readable type', () => {
+  it('disables useMaxWidth at root and per-diagram so CSS owns fit vs actual-size', () => {
     const cfg = buildMermaidInitConfig('dark') as {
       useMaxWidth: boolean
-      sequence: { useMaxWidth: boolean; actorFontSize: number; messageFontSize: number; messageMargin: number }
+      flowchart: { useMaxWidth: boolean }
+      sequence: { useMaxWidth: boolean; actorFontFamily: string }
     }
+    // svg 带自然尺寸输出,CSS 默认 max-width:100% 看全貌,
+    // 点「实际尺寸」才按自然像素滚动看——配置层不放大字号
     expect(cfg.useMaxWidth).toBe(false)
+    expect(cfg.flowchart.useMaxWidth).toBe(false)
     expect(cfg.sequence.useMaxWidth).toBe(false)
-    // 时序图默认偏小:参与者字放大、间距放宽(消息字号保持默认 16)
-    expect(cfg.sequence.actorFontSize).toBeGreaterThan(14)
-    expect(cfg.sequence.messageFontSize).toBeGreaterThanOrEqual(16)
-    expect(cfg.sequence.messageMargin).toBeGreaterThan(35)
+    expect(cfg.sequence.actorFontFamily).toContain('PingFang SC')
   })
 })

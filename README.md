@@ -91,7 +91,7 @@ dsh plugin --profile web add -w @doubleelec/dsh-workspace-explorer@latest
 
 ## Version
 
-Current version **v0.10.3** — **sequence diagrams keep readable type** (no more tiny text: `useMaxWidth: false` + larger actor type/spacing, small charts stretch to fill, wide ones scroll) plus the 0.10.2 fixes below.
+Current version **v0.10.4** — **mermaid fit/actual-size toggle** (diagrams fit the panel by default, one click for actual-size scrolling) plus the fixes below.
 See [CHANGELOG.md](./CHANGELOG.md) for release notes.
 
 ## Roadmap
